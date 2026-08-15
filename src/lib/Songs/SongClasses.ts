@@ -310,10 +310,10 @@ export class MidiNote {
         const toReturn = new MidiNote(time, layer)
         for (let i = 0; i < octavesScale; i++) {
             if (midiNote < MIDI_BOUNDS.lower) {
-                midiNote += 8
+                midiNote += 12
             }
             if (midiNote > MIDI_BOUNDS.upper) {
-                midiNote -= 8
+                midiNote -= 12
             }
         }
         const note = (MIDI_MAP_TO_NOTE.get(`${midiNote}`) || [-1, false]) as [note: number, isAccidental: boolean]

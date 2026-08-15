@@ -1,6 +1,6 @@
 {
-  "name": "Genshin Music Nightly",
-  "short_name": "Genshin Music Nightly",
+  "name": "Sky Music Nightly",
+  "short_name": "Sky Music Nightly",
   "description": "A program to record, practice and share music. \nBy downloading the app, you get fullscreen and better overall experience",
   "icons": [
     {
@@ -21,29 +21,29 @@
   ],
   "file_handlers": [
     {
-      "action": "/",
-      "name": "Import file in genshin music",
+      "action": ".",
+      "name": "Import file in sky music",
       "accept": {
         "application/json": [
-          ".genshinsheet",
-          ".genshinbackup",
-          ".genshintheme",
-          ".genshinfolder"
+          ".skysheet",
+          ".skybackup",
+          ".skytheme",
+          ".skyfolder"
         ]
       },
       "icons": [
         {
-          "src": "/favicon.ico",
+          "src": "favicon.ico",
           "sizes": "48x48",
           "type": "image/x-icon"
         },
         {
-          "src": "/logo192.png",
+          "src": "logo192.png",
           "type": "image/png",
           "sizes": "192x192"
         },
         {
-          "src": "/logo512.png",
+          "src": "logo512.png",
           "type": "image/png",
           "sizes": "512x512"
         }

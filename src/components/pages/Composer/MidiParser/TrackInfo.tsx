@@ -1,5 +1,5 @@
 import {InstrumentData} from '$lib/Songs/SongClasses'
-import {FaArrowDown, FaArrowUp, FaCog} from 'react-icons/fa'
+import {FaArrowDown, FaArrowUp, FaCog, FaMagic} from 'react-icons/fa'
 import {CustomTrack} from './index'
 import {useCallback, useEffect, useState} from 'react'
 import useDebounce from '$lib/Hooks/useDebounce'
@@ -17,12 +17,15 @@ interface TrackProps {
     index: number
     instruments: InstrumentData[]
     onChange: (index: number, data: Partial<CustomTrack>) => void
+    onAutoFit: (index: number) => void
+    onAutoFitReset: (index: number) => void
     theme: Theme
 }
 
-export function TrackInfo({data, index, onChange, theme, instruments}: TrackProps) {
+export function TrackInfo({data, index, onChange, onAutoFit, onAutoFitReset, theme, instruments}: TrackProps) {
     const {t} = useTranslation(['composer', 'common'])
     const [dataShown, setDataShown] = useState(false)
+    const autoFitOn = data.autoFit
     const background = {backgroundColor: theme.layer('menu_background', 0.15).toString()}
     const [offset, setOffset] = useState(`${data.localOffset ?? ""}`)
     const debouncedOffset = useDebounce<string>(offset, 600)
@@ -41,6 +44,15 @@ export function TrackInfo({data, index, onChange, theme, instruments}: TrackProp
     const onMaxScaleChange = useCallback((maxScaling: number) => {
         onChange(index, {maxScaling: Math.max(0, maxScaling)})
     }, [onChange, index])
+
+    const handleAutoFitToggle = useCallback(() => {
+        if (autoFitOn) {
+            onAutoFitReset(index)
+        } else {
+            onAutoFit(index)
+        }
+    }, [autoFitOn, index, onAutoFit, onAutoFitReset])
+
     return <Column gap={'0.5rem'} className='midi-track-column' style={background}>
         <div className='midi-track-wrapper'>
             <div className='midi-track-center'>
@@ -68,9 +80,22 @@ export function TrackInfo({data, index, onChange, theme, instruments}: TrackProp
                         </option>
                     )}
                 </Select>
+                {/* Nút Auto-fit toggle: bật/tắt tự động dịch nốt ngoài khoảng */}
+                <FaMagic
+                    size={18}
+                    color={autoFitOn ? 'var(--secondary)' : 'var(--primary)'}
+                    onClick={handleAutoFitToggle}
+                    cursor='pointer'
+                    title={autoFitOn ? 'Auto-fit: đang bật (bấm để tắt & reset)' : 'Auto-fit: tự động dịch nốt ngoài khoảng vào trong phạm vi đàn'}
+                    style={{
+                        marginLeft: '0.4rem',
+                        filter: autoFitOn ? 'drop-shadow(0 0 4px var(--secondary))' : 'none',
+                        transition: 'color 0.2s, filter 0.2s'
+                    }}
+                />
                 <FaCog
                     size={22}
-                    color={dataShown ? 'var(--secondary)': 'var(--primary)'}
+                    color={dataShown ? 'var(--secondary)' : 'var(--primary)'}
                     onClick={() => setDataShown(!dataShown)}
                     cursor='pointer'
                 />

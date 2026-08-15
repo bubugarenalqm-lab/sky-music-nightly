@@ -48,7 +48,7 @@
     "tauri": "tauri",
     "build-tauri-deployment": "cross-env NEXT_PUBLIC_IS_TAURI=true node ./scripts/buildAndPrepareTauriRelease.js true",
     "build-tauri-deployment:no-env": "cross-env NEXT_PUBLIC_IS_TAURI=true node ./scripts/buildAndPrepareTauriRelease.js false",
-    "build-tauri:sky": "cross-env NEXT_PUBLIC_IS_TAURI=true env-cmd npm run tauri build --config ./src-tauri/tauri-sky.conf.json",
+    "build-tauri:sky": "cross-env NEXT_PUBLIC_IS_TAURI=true env-cmd npm run tauri -- build --config ./src-tauri/tauri-sky.conf.json",
     "build-tauri:sky-no-env": "cross-env NEXT_PUBLIC_IS_TAURI=true npm run tauri build --config ./src-tauri/tauri-sky.conf.json",
     "build-tauri:genshin": "cross-env NEXT_PUBLIC_IS_TAURI=true env-cmd npm run tauri build --config ./src-tauri/tauri-genshin.conf.json",
     "build-tauri:genshin-no-env": "cross-env NEXT_PUBLIC_IS_TAURI=true npm run tauri build --config ./src-tauri/tauri-genshin.conf.json",

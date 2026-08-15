@@ -4,7 +4,7 @@ import {Midi, Track} from '@tonejs/midi'
 import {delay, groupNotesByIndex, isAudioFormat, isVideoFormat, mergeLayers} from '$lib/utils/Utilities'
 import {ColumnNote, InstrumentData, MidiNote, NoteColumn} from '$lib/Songs/SongClasses'
 import {ComposedSong} from '$lib/Songs/ComposedSong'
-import {BASE_PATH, Pitch, PITCHES} from '$config'
+import {BASE_PATH, MIDI_BOUNDS, Pitch, PITCHES} from '$config'
 import {logger} from '$stores/LoggerStore'
 import {Theme, ThemeProvider} from '$stores/ThemeStore/ThemeProvider'
 import {observe} from 'mobx'
@@ -41,6 +41,7 @@ export type CustomTrack = {
     numberOfAccidentals: number
     localOffset: number | null
     maxScaling: number
+    autoFit: boolean
     outOfRangeBounds: {
         lower: number
         upper: number
@@ -109,13 +110,13 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                 const midi = new Midi(file.data as ArrayBuffer)
                 return this.mandleMidiFile(midi, name)
             }
-
         } catch (e) {
             console.error(e)
             logger.hidePill()
             logger.error(this.props.t('logs:error_opening_file'))
         }
     }
+
     extractAudio = async (audio: FileElement<ArrayBuffer>): Promise<AudioBuffer> => {
         const ctx = new AudioContext({
             sampleRate: 22050,
@@ -126,6 +127,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         ctx.close()
         return buffer
     }
+
     parseAudioToMidi = async (audio: AudioBuffer, name: string) => {
         if (!this.warnedOfExperimental) logger.warn(this.props.t('midi_parser.audio_conversion_warning'))
         this.warnedOfExperimental = true
@@ -150,15 +152,15 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         await delay(300)
         const notes = noteFramesToTime(
             outputToNotesPoly(
-                frames,  //frames
-                onsets, //onsets
-                0.5,  //onsetThreshold
-                0.3, //frameThreshold
-                11,  //minimumDuration
-                true, //inferOnsets
-                3000, //maxHz
-                0, //minHz
-                true, //smooth
+                frames,
+                onsets,
+                0.5,
+                0.3,
+                11,
+                true,
+                3000,
+                0,
+                true,
             )
         );
         const midi = new Midi();
@@ -174,6 +176,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         logger.hidePill()
         this.mandleMidiFile(midi, name)
     }
+
     mandleMidiFile = (midi: Midi, name: string) => {
         try {
             const bpm = midi.header.tempos[0]?.bpm
@@ -186,6 +189,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                     name: track.name || `Track n.${i + 1}`,
                     numberOfAccidentals: 0,
                     maxScaling: 0,
+                    autoFit: false,
                     outOfRangeBounds: {
                         lower: 0,
                         upper: 0
@@ -208,6 +212,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
             logger.error(this.props.t('midi_parser.error_is_file_midi'))
         }
     }
+
     convertMidi = () => {
         const {tracks, bpm, offset, includeAccidentals, pitch} = this.state
         const selectedTracks = tracks.filter(track => track.selected)
@@ -262,7 +267,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
             const emptyColumns = Math.floor((elapsedTime - bpmToMs) / bpmToMs)
             const noteColumn = new NoteColumn()
             previousTime = note.time
-            if (emptyColumns > -1) new Array(emptyColumns).fill(0).forEach(() => columns.push(new NoteColumn())) // adds empty columns
+            if (emptyColumns > -1) new Array(emptyColumns).fill(0).forEach(() => columns.push(new NoteColumn()))
             noteColumn.notes = notes.map(note => {
                 const layer = new NoteLayer()
                 layer.set(note.layer, true)
@@ -270,7 +275,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
             })
             columns.push(noteColumn)
         })
-        columns.forEach(column => { //merges notes of different layer
+        columns.forEach(column => {
             const groupedNotes = groupNotesByIndex(column)
             column.notes = groupedNotes.map(group => {
                 group[0].layer = mergeLayers(group)
@@ -293,42 +298,107 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
     }
 
     editTrack = (index: number, data: Partial<CustomTrack>) => {
-        const tracks = this.state.tracks
-        Object.assign(tracks[index], data)
-        this.setState({
-            tracks
-        }, () => {
+        let tracks = [...this.state.tracks]
+        tracks[index] = {...tracks[index], ...data}
+        // Nếu local offset của track vừa đổi và track đang bật auto-fit,
+        // tính lại maxScaling ngay theo offset mới (tránh lệch nhịp debounce)
+        if ('localOffset' in data && tracks[index].autoFit) {
+            tracks[index] = {
+                ...tracks[index],
+                maxScaling: this.computeAutoFitScaling(tracks[index], this.state.offset)
+            }
+        }
+        this.setState({tracks}, () => {
             if (this.state.tracks.length > 0) this.convertMidi()
         })
     }
+
+    // Tính maxScaling tối thiểu để đưa các nốt NGOÀI khoảng vào trong, dựa trên
+    // offset đang áp dụng thực tế cho track (local nếu có, không thì global).
+    // Đây là cơ chế per-note có sẵn trong MidiNote.fromMidi: nốt nào đã nằm
+    // trong [MIDI_BOUNDS.lower, MIDI_BOUNDS.upper] sẽ không bị đụng tới, chỉ
+    // những nốt vượt khung mới được dịch dần (mỗi vòng lặp dịch 8 nửa cung,
+    // đúng bước mà fromMidi dùng) cho tới khi vào trong khung.
+    computeAutoFitScaling = (track: CustomTrack, globalOffset: number): number => {
+        const STEP = 12 // trùng với bước dịch (1 quãng tám thật) trong MidiNote.fromMidi
+        const currentOffset = track.localOffset ?? globalOffset
+        let neededScaling = 0
+        track.track.notes.forEach(midiNote => {
+            const pitch = midiNote.midi - currentOffset
+            let steps = 0
+            if (pitch < MIDI_BOUNDS.lower) {
+                steps = Math.ceil((MIDI_BOUNDS.lower - pitch) / STEP)
+            } else if (pitch > MIDI_BOUNDS.upper) {
+                steps = Math.ceil((pitch - MIDI_BOUNDS.upper) / STEP)
+            }
+            if (steps > neededScaling) neededScaling = steps
+        })
+        return neededScaling
+    }
+
+    // Bật auto-fit cho track: đánh dấu autoFit=true và tính maxScaling ngay lập tức
+    autoFitTrack = (index: number) => {
+        const tracks = [...this.state.tracks]
+        const track = tracks[index]
+        if (!track) return
+        tracks[index] = {
+            ...track,
+            autoFit: true,
+            maxScaling: this.computeAutoFitScaling(track, this.state.offset)
+        }
+        this.setState({tracks}, () => {
+            if (this.state.tracks.length > 0) this.convertMidi()
+        })
+    }
+
+    // Tắt auto-fit -> trả maxScaling về 0 (mặc định, không dịch nốt nào)
+    autoFitReset = (index: number) => {
+        const tracks = [...this.state.tracks]
+        const track = tracks[index]
+        if (!track) return
+        tracks[index] = {...track, autoFit: false, maxScaling: 0}
+        this.setState({tracks}, () => {
+            if (this.state.tracks.length > 0) this.convertMidi()
+        })
+    }
+
+    // Với mọi track đang bật auto-fit, tính lại maxScaling theo offset mới nhất.
+    // Được gọi lại mỗi khi global offset hoặc local offset của 1 track thay đổi,
+    // để tránh tình trạng maxScaling bị "lệch nhịp" so với debounce của ô offset.
+    resyncAutoFitTracks = (tracks: CustomTrack[], globalOffset: number): CustomTrack[] => {
+        return tracks.map(track =>
+            track.autoFit
+                ? {...track, maxScaling: this.computeAutoFitScaling(track, globalOffset)}
+                : track
+        )
+    }
+
     changeOffset = (value: number) => {
         if (!Number.isInteger(value)) value = 0
         if (this.state.offset === value) return
-        this.setState({
-            offset: value
-        }, () => {
+        // Global offset đổi -> tính lại maxScaling cho mọi track đang bật auto-fit,
+        // để không bị lệch nhịp so với debounce của ô nhập offset
+        const tracks = this.resyncAutoFitTracks(this.state.tracks, value)
+        this.setState({offset: value, tracks}, () => {
             if (this.state.tracks.length > 0) this.convertMidi()
         })
     }
+
     changePitch = (value: Pitch) => {
         this.props.functions.changePitch(value)
-        this.setState({
-            pitch: value
-        })
+        this.setState({pitch: value})
     }
+
     toggleAccidentals = () => {
-        this.setState({
-            includeAccidentals: !this.state.includeAccidentals
-        }, () => {
+        this.setState({includeAccidentals: !this.state.includeAccidentals}, () => {
             if (this.state.tracks.length > 0) this.convertMidi()
         })
     }
+
     changeBpm = (value: number) => {
         if (!Number.isInteger(value)) value = 0
         if (this.state.bpm === value) return
-        this.setState({
-            bpm: value
-        }, () => {
+        this.setState({bpm: value}, () => {
             if (this.state.tracks.length > 0) this.convertMidi()
         })
     }
@@ -336,17 +406,9 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
     render() {
         const {handleFile, editTrack, state, changeBpm, changeOffset, changePitch} = this
         const {
-            tracks,
-            fileName,
-            bpm,
-            offset,
-            pitch,
-            accidentals,
-            outOfRange,
-            totalNotes,
-            includeAccidentals,
-            theme,
-            ignoreEmptytracks
+            tracks, fileName, bpm, offset, pitch,
+            accidentals, outOfRange, totalNotes,
+            includeAccidentals, theme, ignoreEmptytracks
         } = state
         const {functions, data, t} = this.props
         const {changeMidiVisibility} = functions
@@ -361,20 +423,13 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
             offset="0.1rem"
         >
             <Column className='floating-midi-content' gap={'0.3rem'}>
-                <Row
-                    className='separator-border'
-                    align={'center'}
-                    style={{width: '100%'}}
-                >
+                <Row className='separator-border' align={'center'} style={{width: '100%'}}>
                     <FilePicker onPick={handleFile} as='buffer'>
                         <button className="midi-btn" style={{...midiInputsStyle, whiteSpace: 'nowrap'}}>
                             {t('midi_parser.open_midi_audio_file')}
                         </button>
                     </FilePicker>
-                    <div
-                        style={{margin: '0 0.5rem'}}
-                        className='text-ellipsis'
-                    >
+                    <div style={{margin: '0 0.5rem'}} className='text-ellipsis'>
                         {fileName}
                     </div>
                     <button
@@ -385,16 +440,9 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                         {t('common:close')}
                     </button>
                 </Row>
-
                 <Row justify={'between'} align={'center'}>
                     <div style={{marginRight: '0.5rem'}}>{t('common:bpm')}:</div>
-                    <NumericalInput
-                        value={bpm}
-                        onChange={changeBpm}
-                        delay={600}
-                        style={midiInputsStyle}
-                        step={5}
-                    />
+                    <NumericalInput value={bpm} onChange={changeBpm} delay={600} style={midiInputsStyle} step={5}/>
                 </Row>
                 <Row justify={'between'} align={'center'}>
                     <div className='row flex-centered'>
@@ -403,14 +451,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                             {t('midi_parser.global_note_offset_description')}
                         </HelpTooltip>
                     </div>
-
-                    <NumericalInput
-                        value={offset}
-                        onChange={changeOffset}
-                        delay={600}
-                        style={midiInputsStyle}
-                        step={1}
-                    />
+                    <NumericalInput value={offset} onChange={changeOffset} delay={600} style={midiInputsStyle} step={1}/>
                 </Row>
                 <Row justify={'between'} align={'center'}>
                     <div style={{marginRight: '0.5rem'}}>{t('common:pitch')}:</div>
@@ -423,11 +464,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                 <Row justify={'between'} align={'center'}>
                     <Row align={'center'}>
                         <div style={{marginRight: '0.5rem'}}>{t("midi_parser.include_accidentals")}:</div>
-                        <Switch
-                            checked={includeAccidentals}
-                            onChange={this.toggleAccidentals}
-                            styleOuter={midiInputsStyle}
-                        />
+                        <Switch checked={includeAccidentals} onChange={this.toggleAccidentals} styleOuter={midiInputsStyle}/>
                     </Row>
                     <Row align={'center'}>
                         <div style={{marginRight: '0.5rem'}}>{t("midi_parser.ignore_empty_tracks")}:</div>
@@ -438,22 +475,25 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
                         />
                     </Row>
                 </Row>
-                {tracks.length > 0 && <Column className='separator-border' style={{width: '100%'}}>
-                    <Column style={{width: '100%'}}>
-                        <div style={{textAlign: 'center'}}>{t("midi_parser.select_midi_tracks")}</div>
-                        {tracks.map((track, i) =>
-                            !(ignoreEmptytracks && track.track.notes.length === 0) &&
-                            <TrackInfo
-                                data={track}
-                                instruments={data.instruments}
-                                key={i}
-                                index={i}
-                                onChange={editTrack}
-                                theme={theme}
-                            />
-                        )}
+                {tracks.length > 0 &&
+                    <Column className='separator-border' style={{width: '100%'}}>
+                        <Column style={{width: '100%'}}>
+                            <div style={{textAlign: 'center'}}>{t("midi_parser.select_midi_tracks")}</div>
+                            {tracks.map((track, i) =>
+                                !(ignoreEmptytracks && track.track.notes.length === 0) &&
+                                <TrackInfo
+                                    data={track}
+                                    instruments={data.instruments}
+                                    key={i}
+                                    index={i}
+                                    onChange={editTrack}
+                                    onAutoFit={this.autoFitTrack}
+                                    onAutoFitReset={this.autoFitReset}
+                                    theme={theme}
+                                />
+                            )}
+                        </Column>
                     </Column>
-                </Column>
                 }
                 {tracks.length > 0 &&
                     <table>
@@ -481,9 +521,4 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
     }
 }
 
-
 export default MidiImport
-
-
-
-
