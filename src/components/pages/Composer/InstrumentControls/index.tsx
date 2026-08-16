@@ -2,9 +2,8 @@ import {AppButton} from "$cmp/shared/Inputs/AppButton";
 import {useTheme} from "$lib/Hooks/useTheme";
 import {InstrumentData} from "$lib/Songs/SongClasses";
 import {memo, useCallback, useEffect, useRef, useState} from "react";
-import {FaCircle, FaCog, FaEye, FaEyeSlash, FaMinus, FaPlus, FaVolumeMute} from "react-icons/fa";
+import {FaCircle, FaCog, FaEye, FaEyeSlash, FaMagic, FaMinus, FaPlus, FaVolumeMute} from "react-icons/fa";
 import {BiSquareRounded} from "react-icons/bi";
-
 import {Theme} from "$stores/ThemeStore/ThemeProvider";
 import {InstrumentSettingsPopup} from "./InstrumentSettingsPopup";
 import {useTranslation} from "react-i18next";
@@ -18,6 +17,7 @@ interface InstrumentControlsProps {
     onInstrumentDelete: (index: number) => void
     onInstrumentAdd: () => void
     onChangePosition: (direction: 1 | -1) => void
+    onAutoNote: () => void
 }
 
 function _InstrumentControls({
@@ -27,7 +27,8 @@ function _InstrumentControls({
                                  onInstrumentDelete,
                                  selected,
                                  onLayerSelect,
-                                 onChangePosition
+                                 onChangePosition,
+                                 onAutoNote
                              }: InstrumentControlsProps) {
     const {t} = useTranslation()
     const [theme] = useTheme()
@@ -76,9 +77,17 @@ function _InstrumentControls({
             >
                 <FaPlus size={16} color='var(--icon-color)'/>
             </AppButton>
+            {/* Nút Auto Note: tự động điều chỉnh các layer thấp hơn layer 1 */}
+            <AppButton
+                onClick={onAutoNote}
+                ariaLabel='Auto Note'
+                className="new-instrument-button flex-centered"
+                style={{marginTop: '0.3rem'}}
+            >
+                <FaMagic size={16} color='var(--icon-color)'/>
+            </AppButton>
         </div>
     </>
-
 }
 
 export const InstrumentControls = memo(_InstrumentControls, (p, n) => {
@@ -141,7 +150,6 @@ function InstrumentButton({
                     />
                 }
             </div>
-
         }
 
         {!isSelected &&
@@ -198,9 +206,7 @@ function InstrumentButton({
                         : <FaEyeSlash size={16}/>
                     }
                 </AppButton>
-
             </div>
         }
     </div>
 }
-

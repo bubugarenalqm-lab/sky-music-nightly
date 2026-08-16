@@ -761,6 +761,78 @@ class Composer extends Component<ComposerProps, ComposerState> {
             selectedColumns: [song.selected]
         }, this.validateBreakpoints)
     }
+    // Tự động điều chỉnh layer 2,3,4... luôn thấp hơn layer trước ít nhất 2 đơn vị
+    // Logic: trừ dần 7 (1 quãng tám Sky) cho đến khi layerN < layer(N-1) - 1
+    autoNote = () => {
+        const {song} = this.state
+        const STEP = 7
+        const MIN_DIFF = 2
+
+        song.columns.forEach(column => {
+            // Với mỗi column, lấy note index của layer 1 (index 0) làm tham chiếu
+            const notesByLayer: Map<number, number[]> = new Map()
+
+            column.notes.forEach(note => {
+                note.layer.toArray().forEach((isActive, layerIndex) => {
+                    if (!isActive) return
+                    if (!notesByLayer.has(layerIndex)) notesByLayer.set(layerIndex, [])
+                    notesByLayer.get(layerIndex)!.push(note.index)
+                })
+            })
+
+            // Với mỗi note trong column, xử lý từng layer > 0
+            column.notes.forEach(note => {
+                note.layer.toArray().forEach((isActive, layerIndex) => {
+                    if (!isActive || layerIndex === 0) return
+
+                    // Tìm note của layer trước đó gần nhất về vị trí
+                    const prevLayerNotes = notesByLayer.get(layerIndex - 1)
+                    if (!prevLayerNotes || prevLayerNotes.length === 0) return
+
+                    // Tìm note layer trước gần nhất
+                    let refNote = prevLayerNotes.reduce((a, b) =>
+                        Math.abs(a - note.index) < Math.abs(b - note.index) ? a : b
+                    )
+
+                    // Resolve: trừ STEP cho tới khi refNote - noteIndex >= MIN_DIFF
+                    let newIndex = note.index
+                    let attempts = 0
+                    while (refNote - newIndex < MIN_DIFF && attempts < 10) {
+                        newIndex -= STEP
+                        attempts++
+                    }
+
+                    // Chỉ cập nhật nếu index hợp lệ (>= 0) và thực sự thay đổi
+                    if (newIndex >= 0 && newIndex !== note.index) {
+                        // Tìm xem đã có note tại vị trí mới chưa
+                        const existingNoteIdx = column.getNoteIndex(newIndex)
+                        if (existingNoteIdx !== null) {
+                            // Merge layer vào note đã có
+                            column.notes[existingNoteIdx].setLayer(layerIndex, true)
+                            note.setLayer(layerIndex, false)
+                        } else {
+                            // Tạo note mới tại vị trí mới
+                            const newNote = column.addNote(newIndex)
+                            newNote.setLayer(layerIndex, true)
+                            note.setLayer(layerIndex, false)
+                        }
+                        // Cập nhật map để layer tiếp theo dùng đúng vị trí mới
+                        notesByLayer.set(layerIndex, [
+                            ...(notesByLayer.get(layerIndex) || []).filter(n => n !== note.index),
+                            newIndex
+                        ])
+                    }
+                })
+                // Xóa note nếu layer rỗng
+            })
+            // Lọc bỏ note rỗng
+            column.notes = column.notes.filter(note => !note.layer.isEmpty())
+        })
+
+        this.changes++
+        this.setState({song})
+        logger.success('Auto Note đã hoàn tất!')
+    }
     validateBreakpoints = () => {
         const {song} = this.state
         song.validateBreakpoints()
@@ -875,6 +947,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
                         onInstrumentChange={this.editInstrument}
                         onInstrumentDelete={this.removeInstrument}
                         onChangePosition={this.switchLayerPosition}
+                        onAutoNote={this.autoNote}
                     />
                 </div>
                 <div className="top-panel-composer" style={{gridArea: "b"}}>

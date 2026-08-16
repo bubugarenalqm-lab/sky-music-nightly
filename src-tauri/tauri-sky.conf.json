@@ -28,9 +28,7 @@
       }
     },
     "updater": {
-      "endpoints": [
-        "https://raw.githubusercontent.com/Specy/genshin-music/main/src-tauri/tauri-sky.update.json"
-      ]
+      "active": false
     },
     "windows": [
       {
