@@ -761,71 +761,72 @@ class Composer extends Component<ComposerProps, ComposerState> {
             selectedColumns: [song.selected]
         }, this.validateBreakpoints)
     }
-    // Tự động điều chỉnh layer 2,3,4... luôn thấp hơn layer trước ít nhất 2 đơn vị
-    // Logic: trừ dần 7 (1 quãng tám Sky) cho đến khi layerN < layer(N-1) - 1
+    // Tự động điều chỉnh layer 2,3,4... luôn cách layer 1 (nốt chính) ít nhất 2 bậc.
+    // Nếu note ở layer phụ cao hơn, bằng, hoặc chỉ thấp hơn 1 bậc so với layer 1 gần nhất
+    // (theo thời gian/vị trí cột), sẽ bị hạ dần 7 đơn vị (1 quãng tám Sky) cho tới khi
+    // đạt khoảng cách tối thiểu là 2. Nếu không thể (index âm), nốt đó ở layer phụ sẽ bị xoá.
     autoNote = () => {
         const {song} = this.state
         const STEP = 7
         const MIN_DIFF = 2
 
-        song.columns.forEach(column => {
-            // Với mỗi column, lấy note index của layer 1 (index 0) làm tham chiếu
-            const notesByLayer: Map<number, number[]> = new Map()
+        // resolve(B, A): hạ dần B (index nốt layer phụ) cho tới khi A - B >= 2
+        // trả về null nếu không tìm được (B < 0)
+        const resolve = (B: number, A: number): number | null => {
+            while (B >= 0) {
+                if (A - B >= MIN_DIFF) return B
+                B -= STEP
+            }
+            return null
+        }
 
+        song.columns.forEach(column => {
+            // Lấy tất cả note index đang thuộc layer 1 (index 0) trong column này
+            const layer1Indexes: number[] = []
             column.notes.forEach(note => {
-                note.layer.toArray().forEach((isActive, layerIndex) => {
-                    if (!isActive) return
-                    if (!notesByLayer.has(layerIndex)) notesByLayer.set(layerIndex, [])
-                    notesByLayer.get(layerIndex)!.push(note.index)
-                })
+                if (note.isLayerToggled(0)) layer1Indexes.push(note.index)
             })
 
-            // Với mỗi note trong column, xử lý từng layer > 0
-            column.notes.forEach(note => {
-                note.layer.toArray().forEach((isActive, layerIndex) => {
-                    if (!isActive || layerIndex === 0) return
+            // Không có nốt layer 1 tham chiếu -> bỏ qua column này
+            if (layer1Indexes.length === 0) return
 
-                    // Tìm note của layer trước đó gần nhất về vị trí
-                    const prevLayerNotes = notesByLayer.get(layerIndex - 1)
-                    if (!prevLayerNotes || prevLayerNotes.length === 0) return
+            // Duyệt qua bản sao danh sách note hiện có (vì ta sẽ chỉnh sửa column.notes bên trong)
+            const originalNotes = [...column.notes]
 
-                    // Tìm note layer trước gần nhất
-                    let refNote = prevLayerNotes.reduce((a, b) =>
-                        Math.abs(a - note.index) < Math.abs(b - note.index) ? a : b
+            originalNotes.forEach(note => {
+                // Duyệt từng layer phụ (2, 3, 4...) mà note này đang bật
+                for (let layerIndex = 1; layerIndex < 20; layerIndex++) {
+                    if (!note.isLayerToggled(layerIndex)) continue
+
+                    const B = note.index
+                    // A = note layer 1 gần nhất (theo index) trong cùng column
+                    const A = layer1Indexes.reduce((a, b) =>
+                        Math.abs(a - B) < Math.abs(b - B) ? a : b
                     )
 
-                    // Resolve: trừ STEP cho tới khi refNote - noteIndex >= MIN_DIFF
-                    let newIndex = note.index
-                    let attempts = 0
-                    while (refNote - newIndex < MIN_DIFF && attempts < 10) {
-                        newIndex -= STEP
-                        attempts++
+                    const resolved = resolve(B, A)
+
+                    if (resolved === null) {
+                        // Không hạ được -> xoá note khỏi layer phụ này
+                        note.setLayer(layerIndex, false)
+                        continue
                     }
 
-                    // Chỉ cập nhật nếu index hợp lệ (>= 0) và thực sự thay đổi
-                    if (newIndex >= 0 && newIndex !== note.index) {
-                        // Tìm xem đã có note tại vị trí mới chưa
-                        const existingNoteIdx = column.getNoteIndex(newIndex)
-                        if (existingNoteIdx !== null) {
-                            // Merge layer vào note đã có
-                            column.notes[existingNoteIdx].setLayer(layerIndex, true)
-                            note.setLayer(layerIndex, false)
-                        } else {
-                            // Tạo note mới tại vị trí mới
-                            const newNote = column.addNote(newIndex)
-                            newNote.setLayer(layerIndex, true)
-                            note.setLayer(layerIndex, false)
-                        }
-                        // Cập nhật map để layer tiếp theo dùng đúng vị trí mới
-                        notesByLayer.set(layerIndex, [
-                            ...(notesByLayer.get(layerIndex) || []).filter(n => n !== note.index),
-                            newIndex
-                        ])
+                    if (resolved === B) continue // đã đạt chuẩn, không cần đổi
+
+                    // Cần dời note sang index mới (resolved)
+                    note.setLayer(layerIndex, false)
+                    const existingIdx = column.getNoteIndex(resolved)
+                    if (existingIdx !== null) {
+                        column.notes[existingIdx].setLayer(layerIndex, true)
+                    } else {
+                        const newNote = column.addNote(resolved)
+                        newNote.setLayer(layerIndex, true)
                     }
-                })
-                // Xóa note nếu layer rỗng
+                }
             })
-            // Lọc bỏ note rỗng
+
+            // Xoá các note đã rỗng hoàn toàn (không còn layer nào bật)
             column.notes = column.notes.filter(note => !note.layer.isEmpty())
         })
 
