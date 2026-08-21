@@ -861,7 +861,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 const parsed = songService.parseSong(song)
                 song.data.appName = APP_NAME
                 const songName = song.name
-                const converted = [APP_NAME === 'Sky' && (parsed instanceof ComposedSong || parsed instanceof RecordedSong)
+                const converted = [(parsed instanceof ComposedSong || parsed instanceof RecordedSong)
                     ? parsed.toOldFormat()
                     : parsed.serialize()
                 ]

@@ -4,6 +4,7 @@ import Liyue_Theme from "$img/themes/Liyue_Theme.jpg"
 import Snow_Theme from "$img/themes/Snow_Theme.gif"
 import Legacy_Bg from "$img/themes/Legacy_Bg_Theme.png"
 import Desert_Theme from "$img/themes/Desert_Theme.jpg"
+import TynxTyn_Theme from "$img/themes/TynxTyn_Theme.jpg"
 
 import {BASE_THEME_CONFIG} from "$config"
 
@@ -14,72 +15,52 @@ const baseThemes: SerializedTheme[] = [
         type: 'theme',
         editable: false,
         other: {
-            backgroundImageMain: "",
-            backgroundImageComposer: "",
-            name: "Pink",
+            backgroundImageMain: TynxTyn_Theme.src,
+            backgroundImageComposer: TynxTyn_Theme.src,
+            name: "Tyn",
         },
         data: {
-            background: {
-                name: "background",
-                css: "background",
-                value: "rgb(48, 49, 64)",
-                text: "#eae8e6"
-            },
-            primary: {
-                name: "primary",
-                css: "primary",
-                value: "rgb(23, 14, 46)",
-                text: "#eae8e6"
-            },
-            secondary: {
-                name: "secondary",
-                css: "secondary",
-                value: "rgb(212, 171, 171)",
-                text: "#151414"
-            },
-            accent: {
-                name: "accent",
-                css: "accent",
-                value: "#DC45B4",
-                text: "#eae8e6"
-            },
-            composer_accent: {
-                name: "composer_accent",
-                css: "composer-accent",
-                value: "rgb(132, 28, 104)",
-                text: "#eae8e6"
-            },
-            icon_color: {
-                name: "icon_color",
-                css: "icon-color",
-                value: "#FBDDFF",
-                text: "#151414"
-            },
-            menu_background: {
-                name: "menu_background",
-                css: "menu-background",
-                value: "rgb(212, 173, 194)",
-                text: "#151414"
-            },
-            note_background: {
-                name: "note_background",
-                css: "note-background",
-                value: "rgb(13, 6, 33)",
-                text: "#eae8e6"
-            },
-            composer_main_layer: {
-                name: "composer_main_layer",
-                css: "composer-main-layer",
-                value: "#d3bd8e",
-                text: BASE_THEME_CONFIG.text.dark
-            },
-            composer_secondary_layer: {
-                name: "composer_secondary_layer",
-                css: "composer-secondary-layer",
-                value: "#de6b45",
-                text: BASE_THEME_CONFIG.text.dark
-            }
-        }
+    background: {
+    name: "background", css: "background",
+    value: "rgba(43, 22, 32, 0.45)", text: "#f5e6e6"
+},
+primary: {
+    name: "primary", css: "primary",
+    value: "rgba(26, 14, 20, 0.5)", text: "#f5e6e6"
+},
+    secondary: {
+        name: "secondary", css: "secondary",
+        value: "#d88a8a", text: "#151414"
+    },
+    accent: {
+        name: "accent", css: "accent",
+        value: "#e0446e", text: "#f5e6e6"
+    },
+    composer_accent: {
+        name: "composer_accent", css: "composer-accent",
+        value: "#8c2f4a", text: "#f5e6e6"
+    },
+    icon_color: {
+        name: "icon_color", css: "icon-color",
+        value: "#f5c2d0", text: "#151414"
+    },
+    menu_background: {
+        name: "menu_background", css: "menu-background",
+        value: "rgba(58, 31, 43, 0.85)", text: "#f5e6e6"
+    },
+    note_background: {
+        name: "note_background", css: "note-background",
+        value: "rgba(31, 16, 23, 0.55)", text: "#f5e6e6"
+    },
+    composer_main_layer: {
+    name: "composer_main_layer", css: "composer-main-layer",
+    value: "#f0c14b", text: "#151414"
+},
+composer_secondary_layer: {
+    name: "composer_secondary_layer", css: "composer-secondary-layer",
+    value: "#d9a520", text: "#151414"
+}
+}
     }, {
         editable: false,
         id: "Blue",

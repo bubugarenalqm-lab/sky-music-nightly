@@ -233,7 +233,7 @@ export class Theme {
     }
 }
 
-export const ThemeProvider = new Theme(defaultThemes[0])
+export const ThemeProvider = new Theme(defaultThemes[1])
 
 export {
     defaultThemes

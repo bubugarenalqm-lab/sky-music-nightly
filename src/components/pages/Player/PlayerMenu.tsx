@@ -166,7 +166,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
             return fileService.downloadMidi(song)
         }
         const songName = song.name
-        const converted = [APP_NAME === 'Sky' ? song.toOldFormat() : song.serialize()]
+        const converted = [song.toOldFormat()]
         fileService.downloadSong(converted, `${songName}.${APP_NAME.toLowerCase()}sheet`)
         logger.success(t('logs:song_downloaded'))
         Analytics.userSongs('download', {page: 'player'})
@@ -201,15 +201,13 @@ function Menu({functions, data, inPreview}: MenuProps) {
     }, [askForComposerImport, t])
 
     async function downloadAllSongs() {
-        try {
-            const songs = await songService.getSongs();
-            const toDownload = songs.map(song => {
-                if (APP_NAME === 'Sky') {
-                    if (song.type === 'composed') return ComposedSong.deserialize(song as UnknownSerializedComposedSong).toOldFormat()
-                    if (song.type === 'recorded') return RecordedSong.deserialize(song as SerializedRecordedSong).toOldFormat()
-                }
-                return song
-            })
+    try {
+        const songs = await songService.getSongs();
+        const toDownload = songs.map(song => {
+            if (song.type === 'composed') return ComposedSong.deserialize(song as UnknownSerializedComposedSong).toOldFormat()
+            if (song.type === 'recorded') return RecordedSong.deserialize(song as SerializedRecordedSong).toOldFormat()
+            return song
+        })
             const date = new Date().toISOString().split('T')[0]
             const folders = await _folderService.getFolders()
             const files = [...folders, ...toDownload]
