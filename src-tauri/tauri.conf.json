@@ -13,18 +13,19 @@
   },
   "tauri": {
     "allowlist": {
-      "fs": {
-        "scope": [
-          "$APP/*"
-        ],
+    "dialog": {
+        "open": true
+    },
+    "fs": {
+        "scope": ["$APP/*", "**"],
         "readFile": true,
         "writeFile": true,
         "readDir": true,
         "copyFile": true,
         "createDir": true,
         "removeFile": true
-      }
-    },
+    }
+},
     "bundle": {
       "active": true,
       "category": "DeveloperTool",

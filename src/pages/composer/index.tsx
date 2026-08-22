@@ -844,6 +844,69 @@ class Composer extends Component<ComposerProps, ComposerState> {
         if (visible) Analytics.songEvent({type: 'create_MIDI'})
     }
 
+    ARCHIVE_KEY = APP_NAME + '_signature_archive_path'
+
+        chooseSignaturePath = async () => {
+        try {
+            const { dialog } = await import('@tauri-apps/api')
+            const dir = await dialog.open({ directory: true, title: 'Chọn thư mục kho lưu trữ' })
+            if (typeof dir === 'string') {
+                localStorage.setItem(this.ARCHIVE_KEY, dir)
+                logger.success('Đã đặt kho lưu trữ: ' + dir)
+            }
+        } catch (e) {
+            console.error(e)
+            logger.error('Không thể chọn thư mục')
+        }
+    }
+
+    signSong = async () => {
+    try {
+        const { fs } = await import('@tauri-apps/api')
+        let archivePath = localStorage.getItem(this.ARCHIVE_KEY)
+        if (!archivePath) {
+            await this.chooseSignaturePath()
+            archivePath = localStorage.getItem(this.ARCHIVE_KEY)
+            if (!archivePath) return
+        }
+        const author = await asyncPrompt("Nhập tên tác giả")
+        if (author === null) return
+
+        const { song } = this.state
+        if (this.state.settings.autosave.value) await this.updateSong(song)
+        const serialized = song.serialize()
+        const parsed = songService.parseSong(serialized)
+        const converted: any = (parsed instanceof ComposedSong || parsed instanceof RecordedSong)
+            ? parsed.toOldFormat()
+            : parsed.serialize()
+
+        const roundedBpm = Math.round((converted.bpm ?? 0) / 5) * 5
+
+        const output = {
+            name: converted.name,
+            author: author,
+            transcribedBy: "Tyn",
+            isComposed: true,
+            bpm: roundedBpm,
+            bitsPerPage: converted.bitsPerPage,
+            pitchLevel: converted.pitchLevel,
+            isEncrypted: false,
+            songNotes: converted.songNotes,
+        }
+
+        const safeName = String(output.name).replace(/[<>:"/\\|?*]/g, "")
+        const fileName = `${safeName}.${APP_NAME.toLowerCase()}sheet`
+        await fs.writeFile({
+            path: `${archivePath}/${fileName}`,
+            contents: JSON.stringify([output])
+        })
+        logger.success('Đã ký tên và chuyển vào kho lưu trữ')
+    } catch (e) {
+        console.error(e)
+        logger.error('Lỗi khi ký tên bài hát')
+    }
+}
+
     downloadSong = async (song: SerializedSong, as: 'song' | 'midi') => {
         try {
             if (song.id === this.state.song.id) {

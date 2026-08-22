@@ -7,10 +7,12 @@ import {
     FaEdit,
     FaEllipsisH,
     FaFolder,
+    FaFolderOpen,
     FaHome,
     FaMusic,
     FaPen,
     FaSave,
+    FaStamp,
     FaTimes,
     FaTrash
 } from 'react-icons/fa';
@@ -73,6 +75,8 @@ interface MenuProps {
         changeVolume: (data: SettingVolumeUpdate) => void
         changeMidiVisibility: (visible: boolean) => void
         startRecordingAudio: (override?: boolean) => void
+        chooseSignaturePath: () => void
+        signSong: () => void
     }
     inPreview?: boolean
 }
@@ -97,7 +101,9 @@ function Menu({data, functions, inPreview}: MenuProps) {
         createNewSong,
         changeMidiVisibility,
         updateThisSong,
-        downloadSong
+        downloadSong,
+        chooseSignaturePath,
+        signSong
     } = functions
     const [theme] = useTheme()
     const menuRef = useClickOutside<HTMLDivElement>((e) => {
@@ -172,10 +178,22 @@ function Menu({data, functions, inPreview}: MenuProps) {
                 <MemoizedIcon icon={FaTimes} className={'icon'}/>
             </MenuButton>
             <MenuButton
+                onClick={chooseSignaturePath}
+                ariaLabel='Chọn kho lưu trữ'
+                style={{marginTop: 'auto'}}
+            >
+                <MemoizedIcon icon={FaFolderOpen} className={'icon'}/>
+            </MenuButton>
+            <MenuButton
+                onClick={signSong}
+                ariaLabel='Ký tên'
+            >
+                <MemoizedIcon icon={FaStamp} className={'icon'}/>
+            </MenuButton>
+            <MenuButton
                 onClick={updateThisSong}
                 className={data.hasChanges ? "not-saved" : ""}
                 ariaLabel='Save'
-                style={{marginTop: 'auto'}}
             >
                 <MemoizedIcon icon={FaSave} className={'icon'}/>
             </MenuButton>
