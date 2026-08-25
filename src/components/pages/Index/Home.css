@@ -23,6 +23,10 @@
 
 .home-padded {
     padding: 1rem 25vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100%;
 }
 
 @keyframes home-appear {
@@ -390,6 +394,10 @@
 .home-top {
     text-align: center;
     margin-bottom: 1rem;
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 0.6rem;
+    padding: 1rem 1.5rem;
+    backdrop-filter: blur(4px);
 }
 
 .home-title {

@@ -309,18 +309,32 @@ export class RecordedSong extends Song<RecordedSong, SerializedRecordedSong> {
             converted.pitch = (PITCHES[song.pitchLevel || 0]) || "C"
             const notes: OldNote[] = song.songNotes.filter((note: OldNote, index: number, self: any) =>
                     index === self.findIndex((n: OldNote) => {
-                        return n.key.split('Key')[1] === note.key.split('Key')[1] && n.time === note.time
+                        return n.key === note.key && n.time === note.time
                     })
             )
             notes.forEach((note) => {
                 const data = note.key.split("Key")
-                const layer = new NoteLayer((note.l ?? Number(data[0])) || 1)
+                const layerNumber = (note.l ?? Number(data[0])) || 1
+                const layer = new NoteLayer()
+                layer.set(layerNumber - 1, true)
                 const recordedNote = new RecordedNote(IMPORT_NOTE_POSITIONS[Number(data[1])], note.time, layer)
                 converted.notes.push(recordedNote)
             })
             const highestLayer = NoteLayer.maxLayer(converted.notes.map(note => note.layer))
             const numberOfInstruments = highestLayer.toString(2).length
-            converted.instruments = new Array(numberOfInstruments).fill(0).map(_ => new InstrumentData())
+            if (Array.isArray(song.instruments) && song.instruments.length >= numberOfInstruments) {
+    converted.instruments = song.instruments
+        .slice(0, numberOfInstruments)
+        .map((ins: any) => InstrumentData.deserialize(ins))
+} else {
+    if (Array.isArray(song.instruments) && song.instruments.length >= numberOfInstruments) {
+    converted.instruments = song.instruments
+        .slice(0, numberOfInstruments)
+        .map((ins: any) => InstrumentData.deserialize(ins))
+} else {
+    converted.instruments = new Array(numberOfInstruments).fill(0).map(_ => new InstrumentData())
+}
+}
             if ([true, "true"].includes(song.isComposed)) {
                 return converted.toComposedSong()
             }

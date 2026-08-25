@@ -15,6 +15,7 @@ import {useRouter} from 'next/router'
 import {clearClientCache, isTWA} from '$lib/utils/Utilities'
 import {asyncConfirm} from '$cmp/shared/Utility/AsyncPrompts'
 import {MdOutlinePiano} from "react-icons/md";
+import {FaFacebook, FaDiscord, FaRobot} from "react-icons/fa";
 import {usePathname} from "next/navigation";
 import {logger} from "$stores/LoggerStore";
 import {Row} from "$cmp/shared/layout/Row";
@@ -24,6 +25,7 @@ import {PromotionCard} from "$cmp/pages/Promotion/PromotionCard";
 import {pwaStore} from "$stores/PwaStore";
 import {usePageVisit} from "$cmp/shared/PageVisit/pageVisit";
 import {PagesVersionsKeys} from "$/PagesVersions";
+
 
 
 interface HomeProps {
@@ -115,66 +117,6 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
                 </div>
             </div>
             }
-
-
-            {!hasVisited && <div className='home-welcome'>
-                <div>
-                    {!isTwa && <div className='home-spacing'>
-                        {t("add_to_home_screen")}. <Link
-                            href={'/blog/posts/add-to-home-screen'}
-                            onClick={homeStore.close}
-                            style={{
-                                textDecoration: "underline",
-                                color: 'var(--accent)'
-                            }}
-                        >
-                            {t('how_to_install')}
-                        </Link>
-                    </div>}
-                    <div className='home-spacing'>
-                        <div className="red-text">{t('common:warning')}</div>
-                        : {t("clear_cache_warning")}
-                    </div>
-
-                    {data.hasPersistentStorage &&
-                        <div>
-                            <div className="red-text">{t('common:warning')}</div>
-                            : {t('home:persistent_storage_button')}
-                        </div>
-                    }
-                    <div>
-                        <span style={{marginRight: '0.2rem'}}>
-                            {t("privacy_policy")}
-                        </span>
-                        <Link
-                            href='/privacy'
-                            style={{color: 'var(--primary-text)', textDecoration: "underline"}}
-                            onClick={homeStore.close}
-                        >
-                            {t('common:privacy')}
-                        </Link>
-                    </div>
-                    <div>
-                        {t('home:no_affiliation', {company_name: APP_NAME === "Sky" ? "thatgamecompany" : "HoYoverse"})}
-                    </div>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'flex-end'}}>
-                    <button className="home-accept-storage"
-                            onClick={() => {
-                                closeWelcomeScreen()
-                                askForStorage()
-                            }}
-                    >
-                        {t('common:confirm')}
-                    </button>
-                </div>
-            </div>}
-            {hasVisited &&
-                <PromotionCard
-                    style={{marginBottom: '0.5rem'}}
-                    onClick={() => homeStore.close()}
-                />
-            }
             <div className='home-content'>
                 <MainContentElement
                     pageKey={'composer'}
@@ -200,89 +142,45 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
                 </MainContentElement>
             </div>
             <div className='row space-around middle-size-pages-wrapper'>
-                <MiddleSizePage
-                    Icon={VsrgComposerIcon}
-                    current={currentPage === '/vsrg-composer'}
-                    href='/vsrg-composer'
+                
+                <a
+                    href='https://www.facebook.com/Tynnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='middle-size-page row'
                 >
+                    <FaFacebook className='middle-size-page-icon'/>
                     <span style={{fontSize: '1rem'}} className='row-centered'>
-                        {t('vsrg_composer_name')}
+                        Facebook
                     </span>
-
-                </MiddleSizePage>
-
-                <MiddleSizePage
-                    Icon={VsrgIcon}
-                    current={currentPage === '/vsrg-player'}
-                    href='/vsrg-player'
+                </a>
+                
+                <a
+                    href='https://discord.com/users/1162745976927289454'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='middle-size-page row'
                 >
+                    <FaDiscord className='middle-size-page-icon'/>
                     <span style={{fontSize: '1rem'}} className='row-centered'>
-                        {t('vsrg_player_name')}
+                        Discord
                     </span>
-                </MiddleSizePage>
-                <MiddleSizePage
-                    Icon={MdOutlinePiano}
-                    current={currentPage === '/zen-keyboard'}
-                    href='/zen-keyboard'
+                </a>
+                
+                <a
+                    href='https://www.mediafire.com/file/wn8x4pbd2q9cj5l/TynAutoSky.zip/file'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='middle-size-page row'
                 >
+                    <FaRobot className='middle-size-page-icon'/>
                     <span style={{fontSize: '1rem'}} className='row-centered'>
-                        {t('zen_keyboard_name')}
+                        Tyn Auto Sky
                     </span>
-                </MiddleSizePage>
+                </a>
             </div>
             <Separator/>
-            <div className='page-redirect-wrapper'>
-                {!isTwa &&
-                    <PageRedirect href='/donate' current={currentPage === '/donate'} pageKey={'donate'}>
-                        {t('common:donate')}
-                    </PageRedirect>
-                }
-
-                <PageRedirect href='/sheet-visualizer' current={currentPage === '/sheet-visualizer'}
-                              pageKey={'sheetVisualizer'}>
-                    {t('sheet_visualizer_name')}
-                </PageRedirect>
-                <PageRedirect href='/theme' current={currentPage === '/theme'} pageKey={'theme'}>
-                    {t('themes_name')}
-                </PageRedirect>
-                <PageRedirect href={'/blog'} current={currentPage.startsWith("/blog")} pageKey={'blog'}>
-                    {t('blog_and_guides_name')}
-                </PageRedirect>
-                <PageRedirect href='/keybinds' current={currentPage === '/keybinds'} pageKey={'keybinds'}>
-                    {t('keybinds_or_midi_name')}
-                </PageRedirect>
-
-                <PageRedirect href='/partners' current={currentPage === '/partners'} pageKey={'partners'}>
-                    {t('partners_name')}
-                </PageRedirect>
-
-                <PageRedirect href='/backup' current={currentPage === '/backup'} pageKey={'backup'}>
-                    {t('backup_name')}
-                </PageRedirect>
-                <PageRedirect href='/changelog' current={currentPage === '/changelog'} pageKey={'changelog'}>
-                    {t('changelog_name')}
-                </PageRedirect>
-
-                <Link onClick={async (e) => {
-                    e.preventDefault()
-                    const confirm = await asyncConfirm(t('about_to_leave_warning', {to: 'specy.app'}))
-                    if (!confirm) return
-                    window.open('https://specy.app', '_blank')
-                }} href={'https://specy.app'} target='_blank'>
-                    {t('other_apps_name')}
-                </Link>
-                <AppButton onClick={clearCache}>
-                    {t('clear_cache_name')}
-                </AppButton>
-                {installEvent &&
-                    <AppButton onClick={pwaStore.install} cssVar={'accent'}>
-                        <FaDownload/> {t('install_app')}
-                    </AppButton>
-                }
-            </div>
-
         </div>
-
         <div className='home-bottom'>
             <Row align={'center'} className='home-app-scaling'>
                 <span>

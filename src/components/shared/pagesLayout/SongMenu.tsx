@@ -187,7 +187,7 @@ export function SongMenu<T extends { data: SongStorable }>({
                 data={folder}
             >
                 {(!exclude?.includes('composed') && composed.length > 0) &&
-                    <SongFolderContent title="Composed">
+                    <SongFolderContent title="My Composed">
                         {composed.map(song =>
                             <SongComponent
                                 {...componentProps}
@@ -198,7 +198,7 @@ export function SongMenu<T extends { data: SongStorable }>({
                     </SongFolderContent>
                 }
                 {(!exclude?.includes('recorded') && recorded.length > 0) &&
-                    <SongFolderContent title="Recorded">
+                    <SongFolderContent title="Sheet Library">
                         {recorded.map(song =>
                             <SongComponent
                                 {...componentProps}

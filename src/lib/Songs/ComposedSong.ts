@@ -228,18 +228,29 @@ export class ComposedSong extends Song<ComposedSong, SerializedComposedSong, 3> 
         const msPerBeat = 60000 / song.bpm
         let totalTime = 100
         song.columns.forEach(column => {
+            const columnNotes: OldFormatNoteType[] = []
             column[1].forEach(note => {
                 const parsedLayer = NoteLayer.deserializeHex(note[1])
-                const stringifiedLayer = parsedLayer.toArray().join("").padEnd(4, "0").substring(0, 4)
-                const layer = LAYERS_MAP[stringifiedLayer] ?? 1
-                if (layer === 0) return
-                const noteObj: OldFormatNoteType = {
-                    key: (layer > 2 ? 2 : layer) + 'Key' + note[0],
-                    time: totalTime,
-                    ...layer > 2 ? {l: 3} : {}
+                const activeLayers = parsedLayer.toArray()
+                let hasNote = false
+                activeLayers.forEach((bit, index) => {
+                    if (bit !== 1) return
+                    hasNote = true
+                    columnNotes.push({
+                        key: (index + 1) + 'Key' + note[0],
+                        time: totalTime
+                    })
+                })
+                if (!hasNote) {
+                    columnNotes.push({key: '1Key' + note[0], time: totalTime})
                 }
-                convertedNotes.push(noteObj)
             })
+            columnNotes.sort((a, b) => {
+                const layerA = parseInt(a.key.split('Key')[0])
+                const layerB = parseInt(b.key.split('Key')[0])
+                return layerA - layerB
+            })
+            convertedNotes.push(...columnNotes)
             //old format uses floor instead of rounding
             totalTime += Math.floor(msPerBeat * TEMPO_CHANGERS[column[0]].changer)
         })

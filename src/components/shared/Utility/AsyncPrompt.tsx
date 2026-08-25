@@ -166,7 +166,7 @@ function AsyncPrompt({question, deferred, cancellable}: AsyncPromptState) {
                 className="prompt-input"
                 value={value}
                 onKeyDown={e => {
-                    if (e.key === 'Enter' && value) asyncPromptStore.answerPrompt(value)
+                    if (e.key === 'Enter') asyncPromptStore.answerPrompt(value)
                     if (e.key === 'Escape' && cancellable) asyncPromptStore.answerPrompt(null)
                 }}
                 onChange={(e) => setValue(e.target.value)}

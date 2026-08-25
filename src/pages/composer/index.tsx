@@ -59,6 +59,7 @@ interface ComposerState {
     isRecordingAudio: boolean
     isPlaying: boolean
     theme: Theme
+    isReadOnly: boolean
 }
 
 type PageProps = {
@@ -96,7 +97,8 @@ class Composer extends Component<ComposerProps, ComposerState> {
             isToolsVisible: false,
             isMidiVisible: this.props.showMidi || false,
             isRecordingAudio: false,
-            theme: ThemeProvider
+            theme: ThemeProvider,
+            isReadOnly: false
         }
         this.state.song.bpm = settings.bpm.value
         this.mounted = false
@@ -294,6 +296,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
     }
 
     addInstrument = () => {
+        if (this.state.isReadOnly) return
         const {song} = this.state
         const isUmaMode = globalConfigStore.get().IS_UMA_MODE
         if (song.instruments.length >= NoteLayer.MAX_LAYERS && !isUmaMode) return logger.error(this.props.t('composer:cant_add_more_than_n_layers', {max_layers: NoteLayer.MAX_LAYERS}))
@@ -314,6 +317,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         }
     }
     editInstrument = (instrument: InstrumentData, index: number) => {
+        if (this.state.isReadOnly) return
         const {song} = this.state
         song.instruments[index] = instrument.clone()
         song.instruments = [...song.instruments]
@@ -411,6 +415,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({settings: {...settings}}, this.updateSettings)
     }
     handleClick = (note: ObservableNote) => {
+        if (this.state.isReadOnly) return
         const {song, layer} = this.state
         const column = song.selectedColumn
         const index = column.getNoteIndex(note.index)
@@ -479,6 +484,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         })
     }
     updateThisSong = async () => {
+        if (this.state.isReadOnly) return
         this.updateSong(this.state.song)
     }
     askForSongUpdate = async () => {
@@ -502,7 +508,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song: added, layer: 0})
         Analytics.songEvent({type: 'create'})
     }
-    loadSong = async (song: SerializedSong | ComposedSong) => {
+    loadSong = async (song: SerializedSong | ComposedSong, readOnly: boolean = false) => {
         try {
             const state = this.state
             let parsed: ComposedSong | null = null
@@ -549,7 +555,8 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 layer: 0,
                 song: parsed,
                 settings: {...settings},
-                selectedColumns: []
+                selectedColumns: [],
+                isReadOnly: readOnly
             }, () => this.syncInstruments())
         } catch (e) {
             console.error(e)
@@ -559,6 +566,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
     }
 
     addColumns = (amount = 1, position: number | 'end' = "end"): Promise<void> => {
+        if (this.state.isReadOnly) return Promise.resolve()
         return new Promise(resolve => {
             const {song} = this.state
             song.addColumns(amount, position)
@@ -569,6 +577,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
     }
 
     removeColumns = (amount: number, position: number) => {
+        if (this.state.isReadOnly) return
         const {song, settings} = this.state
         if (song.columns.length < (settings.beatMarks.value * 4)) return
         song.removeColumns(amount, position)
@@ -610,12 +619,14 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.selectColumn(newIndex, false, errorDelay)
     }
     toggleBreakpoint = (override?: number) => {
+        if (this.state.isReadOnly) return
         const {song} = this.state
         song.toggleBreakpoint(override)
         this.validateBreakpoints()
         this.setState({song})
     }
     handleTempoChanger = (changer: TempoChanger) => {
+        if (this.state.isReadOnly) return
         const {song, selectedColumns} = this.state
         if (selectedColumns.length) {
             this.addToHistory()
@@ -696,6 +707,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         })
     }
     undo = () => {
+        if (this.state.isReadOnly) return
         const {undoHistory, song} = this.state
         const history = undoHistory.pop()
         if (!history) return
@@ -710,12 +722,14 @@ class Composer extends Component<ComposerProps, ComposerState> {
         })
     }
     copyColumns = (layer: number | 'all') => {
+        if (this.state.isReadOnly) return
         const {selectedColumns, song} = this.state
         const copiedColumns = song.copyColumns(selectedColumns, layer)
         this.changes++
         this.setState({selectedColumns: [], copiedColumns})
     }
     pasteColumns = async (insert: boolean, layer: number | 'all') => {
+        if (this.state.isReadOnly) return
         const {song, copiedColumns} = this.state
         this.addToHistory()
         if (layer === 'all') song.pasteColumns(copiedColumns, insert)
@@ -725,6 +739,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song})
     }
     eraseColumns = (layer: number | 'all') => {
+        if (this.state.isReadOnly) return
         const {song, selectedColumns} = this.state
         this.addToHistory()
         song.eraseColumns(selectedColumns, layer)
@@ -732,6 +747,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song, selectedColumns: [song.selected]})
     }
     moveNotesBy = (amount: number, position: number | "all") => {
+        if (this.state.isReadOnly) return
         const {song, selectedColumns} = this.state
         this.addToHistory()
         song.moveNotesBy(selectedColumns, amount, position)
@@ -739,6 +755,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song})
     }
     switchLayerPosition = (direction: 1 | -1) => {
+        if (this.state.isReadOnly) return
         const {song, layer} = this.state
         const toSwap = layer + direction
         if (toSwap < 0 || toSwap > song.instruments.length - 1) return
@@ -752,6 +769,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song, layer: toSwap})
     }
     deleteColumns = async () => {
+        if (this.state.isReadOnly) return
         const {song, selectedColumns} = this.state
         this.addToHistory()
         song.deleteColumns(selectedColumns)
@@ -844,7 +862,22 @@ class Composer extends Component<ComposerProps, ComposerState> {
         if (visible) Analytics.songEvent({type: 'create_MIDI'})
     }
 
-    ARCHIVE_KEY = APP_NAME + '_signature_archive_path'
+        ARCHIVE_KEY = APP_NAME + '_signature_archive_path'
+    	DOWNLOAD_KEY = APP_NAME + '_download_path'
+
+    	chooseDownloadPath = async () => {
+        try {
+            const { dialog } = await import('@tauri-apps/api')
+            const dir = await dialog.open({ directory: true, title: 'Chọn thư mục tải về' })
+            if (typeof dir === 'string') {
+                localStorage.setItem(this.DOWNLOAD_KEY, dir)
+                logger.success('Đã đặt thư mục tải về: ' + dir)
+            }
+        } catch (e) {
+            console.error(e)
+            logger.error('Không thể chọn thư mục')
+        }
+    }
 
         chooseSignaturePath = async () => {
         try {
@@ -860,53 +893,52 @@ class Composer extends Component<ComposerProps, ComposerState> {
         }
     }
 
-    signSong = async () => {
-    try {
-        const { fs } = await import('@tauri-apps/api')
-        let archivePath = localStorage.getItem(this.ARCHIVE_KEY)
-        if (!archivePath) {
-            await this.chooseSignaturePath()
-            archivePath = localStorage.getItem(this.ARCHIVE_KEY)
-            if (!archivePath) return
+signSong = async () => {
+        try {
+            const { fs } = await import('@tauri-apps/api')
+            let archivePath = localStorage.getItem(this.ARCHIVE_KEY)
+            if (!archivePath) {
+                await this.chooseSignaturePath()
+                archivePath = localStorage.getItem(this.ARCHIVE_KEY)
+                if (!archivePath) return
+            }
+            const authorInput = await asyncPrompt("Nhập tên tác giả")
+            if (authorInput === null) return
+            const author = authorInput.trim()
+            const { song } = this.state
+            if (this.state.settings.autosave.value) await this.updateSong(song)
+            const serialized = song.serialize()
+            const parsed = songService.parseSong(serialized)
+            const converted: any = (parsed instanceof ComposedSong || parsed instanceof RecordedSong)
+                ? parsed.toOldFormat()
+                : parsed.serialize()
+            // Lấy danh sách nhạc cụ: ưu tiên lấy từ bản đã convert, nếu không có thì serialize trực tiếp từ song.instruments
+            const instruments = converted.instruments ?? song.instruments.map((ins: InstrumentData) => ins.serialize())
+		const output = {
+                name: converted.name,
+                author: author,
+                transcribedBy: "Tyn",
+                instruments: instruments,
+                isComposed: true,
+                bpm: converted.bpm,
+                bitsPerPage: converted.bitsPerPage,
+                pitchLevel: converted.pitchLevel,
+                isEncrypted: false,
+                songNotes: converted.songNotes,
+            }
+            const safeSongName = String(output.name).replace(/[<>:"/\\|?*]/g, "")
+            const safeAuthor = String(author).trim().replace(/[<>:"/\\|?*]/g, "")
+            const fileName = safeAuthor ? `${safeSongName} - ${safeAuthor}.txt` : `${safeSongName}.txt`
+            await fs.writeFile({
+                path: `${archivePath}/${fileName}`,
+                contents: JSON.stringify([output])
+            })
+            logger.success('Đã ký tên và chuyển vào kho lưu trữ')
+        } catch (e) {
+            console.error(e)
+            logger.error('Lỗi khi ký tên bài hát')
         }
-        const author = await asyncPrompt("Nhập tên tác giả")
-        if (author === null) return
-
-        const { song } = this.state
-        if (this.state.settings.autosave.value) await this.updateSong(song)
-        const serialized = song.serialize()
-        const parsed = songService.parseSong(serialized)
-        const converted: any = (parsed instanceof ComposedSong || parsed instanceof RecordedSong)
-            ? parsed.toOldFormat()
-            : parsed.serialize()
-
-        const roundedBpm = Math.round((converted.bpm ?? 0) / 5) * 5
-
-        const output = {
-            name: converted.name,
-            author: author,
-            transcribedBy: "Tyn",
-            isComposed: true,
-            bpm: roundedBpm,
-            bitsPerPage: converted.bitsPerPage,
-            pitchLevel: converted.pitchLevel,
-            isEncrypted: false,
-            songNotes: converted.songNotes,
-        }
-
-        const safeName = String(output.name).replace(/[<>:"/\\|?*]/g, "")
-        const fileName = `${safeName}.${APP_NAME.toLowerCase()}sheet`
-        await fs.writeFile({
-            path: `${archivePath}/${fileName}`,
-            contents: JSON.stringify([output])
-        })
-        logger.success('Đã ký tên và chuyển vào kho lưu trữ')
-    } catch (e) {
-        console.error(e)
-        logger.error('Lỗi khi ký tên bài hát')
     }
-}
-
     downloadSong = async (song: SerializedSong, as: 'song' | 'midi') => {
         try {
             if (song.id === this.state.song.id) {
@@ -928,7 +960,22 @@ class Composer extends Component<ComposerProps, ComposerState> {
                     ? parsed.toOldFormat()
                     : parsed.serialize()
                 ]
-                fileService.downloadSong(converted, `${songName}.${APP_NAME.toLowerCase()}sheet`)
+                               const downloadFileName = `${songName}.${APP_NAME.toLowerCase()}sheet`
+                const downloadPath = localStorage.getItem(this.DOWNLOAD_KEY)
+                if (downloadPath) {
+                    try {
+                        const { fs } = await import('@tauri-apps/api')
+                        await fs.writeFile({
+                            path: `${downloadPath}/${downloadFileName}`,
+                            contents: JSON.stringify(converted)
+                        })
+                    } catch (e) {
+                        console.error(e)
+                        fileService.downloadSong(converted, downloadFileName)
+                    }
+                } else {
+                    fileService.downloadSong(converted, downloadFileName)
+                }
                 logger.success(this.props.t('logs:song_downloaded'))
                 Analytics.userSongs('download', {page: 'composer'})
             } else if (as === 'midi') {

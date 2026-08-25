@@ -297,3 +297,31 @@
         display: flex;
     }
 }
+.shop-sheets-wrapper {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 0.4rem;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+.shop-sheet-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    color: var(--primary-text);
+}
+.shop-sheet-row:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+.shop-sheet-row.selected {
+    background-color: var(--accent);
+    color: var(--accent-text, #fff);
+    font-weight: bold;
+}

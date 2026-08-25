@@ -193,8 +193,8 @@ export const i18n_en = {
         filter_alphabetical: "Alphabetical",
         "filter_date-created": "Date created",
         open_in_composer: "Open in composer",
-        recorded: "Recorded", //recorded songs
-        composed: "Composed", //composed songs
+        recorded: "Sheet Library", //recorded songs
+        composed: "My Composed", //composed songs
         vsrg: "VSRG", //vsrg songs, leave as is
         midi: "MIDI", //midi songs, leave as is
         song_library: "Library",

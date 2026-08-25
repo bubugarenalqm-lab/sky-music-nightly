@@ -25,6 +25,8 @@ import {MenuButton, MenuItem} from '$cmp/shared/Menu/MenuItem'
 import {MenuPanel, MenuPanelWrapper} from '$cmp/shared/Menu/MenuPanel'
 import DonateButton from '$cmp/shared/Miscellaneous/DonateButton'
 import LibrarySearchedSong from '$cmp/shared/Miscellaneous/LibrarySearchedSong'
+import ShopSheetRow from '$cmp/shared/Miscellaneous/ShopSheetRow'
+import {fetchShopSheetsList, ShopSheetListItem} from '$lib/Services/SupabaseService'
 import {SongActionButton} from '$cmp/shared/Inputs/SongActionButton'
 import Analytics from '$lib/Analytics';
 import {homeStore} from '$stores/HomeStore';
@@ -83,7 +85,7 @@ interface MenuProps {
 }
 
 export type MenuTabs = 'Help' | 'Library' | 'Songs' | 'Settings' | 'Home'
-const excludedSongs: SongType[] = ['vsrg']
+const excludedSongs: SongType[] = ['vsrg', 'recorded']
 
 function Menu({functions, data, inPreview}: MenuProps) {
     const {t} = useTranslation(['player', 'question', 'confirm', 'settings', 'menu', 'common', 'logs', 'tutorials'])
@@ -94,11 +96,31 @@ function Menu({functions, data, inPreview}: MenuProps) {
     const [searchInput, setSearchInput] = useState('')
     const [searchedSongs, setSearchedSongs] = useState<SearchedSongType[]>([])
     const [searchStatus, setSearchStatus] = useState('')
+    const [shopSheets, setShopSheets] = useState<ShopSheetListItem[]>([])
+    const [shopSheetsStatus, setShopSheetsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [selectedSheetId, setSelectedSheetId] = useState<number | null>(null)
     const {IS_MIDI_AVAILABLE} = useConfig()
     const [isPersistentStorage, setPeristentStorage] = useState(false)
     const [theme] = useTheme()
     const [folders] = useFolders()
     const {handleSettingChange, addSong, removeSong, renameSong} = functions
+    const onLoadShopSheet = (song: RecordedSong | ComposedSong, id: number) => {
+        playerStore.play(song)
+        setSelectedSheetId(id)
+    }
+    useEffect(() => {
+        if (shopSheetsStatus !== 'idle') return
+        setShopSheetsStatus('loading')
+        fetchShopSheetsList()
+            .then(list => {
+                setShopSheets(list)
+                setShopSheetsStatus('success')
+            })
+            .catch(e => {
+                console.error(e)
+                setShopSheetsStatus('error')
+            })
+    }, [shopSheetsStatus])
     const menuRef = useClickOutside<HTMLDivElement>((e) => {
         setOpen(false)
     }, {active: isOpen, ignoreFocusable: true})
@@ -308,6 +330,22 @@ function Menu({functions, data, inPreview}: MenuProps) {
                         functions: {removeSong, toggleMenu, downloadSong, renameSong}
                     }}
                 />
+                <div style={{marginTop: '0.8rem', fontWeight: 'bold'}}>
+                    Sheet Library
+                </div>
+                <div className='shop-sheets-wrapper' style={{marginTop: '0.3rem'}}>
+                    {shopSheetsStatus === 'loading' && <div>Loading...</div>}
+                    {shopSheetsStatus === 'error' && <div>Error loading sheet library</div>}
+                    {shopSheetsStatus === 'success' && shopSheets.map(sheet =>
+                        <ShopSheetRow
+                            key={sheet.id}
+                            data={sheet}
+                            theme={theme}
+                            isSelected={selectedSheetId === sheet.id}
+                            onLoad={(song) => onLoadShopSheet(song, sheet.id)}
+                        />
+                    )}
+                </div>
                 <div style={{
                     marginTop: "auto",
                     paddingTop: '0.5rem',

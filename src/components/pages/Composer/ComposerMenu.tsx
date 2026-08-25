@@ -25,6 +25,8 @@ import Analytics from '$lib/Analytics';
 import {logger} from '$stores/LoggerStore';
 import {AppButton} from '$cmp/shared/Inputs/AppButton';
 import {SongMenu} from '$cmp/shared/pagesLayout/SongMenu';
+import ShopSheetRow from '$cmp/shared/Miscellaneous/ShopSheetRow';
+import {fetchShopSheetsList, ShopSheetListItem} from '$lib/Services/SupabaseService';
 import {ComposerSettingsDataType} from '$lib/BaseSettings';
 import {SettingUpdate, SettingVolumeUpdate} from '$types/SettingsPropriety';
 import {useTheme} from '$lib/Hooks/useTheme';
@@ -58,6 +60,9 @@ import {useTranslation} from "react-i18next";
 import {DefaultLanguageSelector} from "$cmp/shared/i18n/LanguageSelector";
 import {Separator} from "$cmp/shared/separator/Separator";
 
+const ARCHIVE_PATH_KEY = APP_NAME + '_signature_archive_path'
+const DOWNLOAD_PATH_KEY = APP_NAME + '_download_path'
+
 interface MenuProps {
     data: {
         settings: ComposerSettingsDataType,
@@ -75,14 +80,79 @@ interface MenuProps {
         changeVolume: (data: SettingVolumeUpdate) => void
         changeMidiVisibility: (visible: boolean) => void
         startRecordingAudio: (override?: boolean) => void
-        chooseSignaturePath: () => void
+        chooseSignaturePath: () => Promise<void>
+        chooseDownloadPath: () => Promise<void>
         signSong: () => void
     }
     inPreview?: boolean
 }
 
 export type MenuTabs = 'Songs' | 'Help' | 'Settings' | 'Home'
-const excludedSongs: SongType[] = ['vsrg']
+const excludedSongs: SongType[] = ['vsrg', 'recorded']
+
+function PathSettingsSection({functions}: {
+    functions: {
+        chooseSignaturePath: () => Promise<void>
+        chooseDownloadPath: () => Promise<void>
+    }
+}) {
+    const [downloadPath, setDownloadPath] = useState('')
+    const [archivePath, setArchivePath] = useState('')
+
+    useEffect(() => {
+        setDownloadPath(localStorage.getItem(DOWNLOAD_PATH_KEY) || '')
+        setArchivePath(localStorage.getItem(ARCHIVE_PATH_KEY) || '')
+    }, [])
+
+    const rowStyle: React.CSSProperties = {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.3rem',
+        marginBottom: '0.8rem'
+    }
+    const pathTextStyle: React.CSSProperties = {
+        fontSize: '0.8rem',
+        opacity: 0.8,
+        wordBreak: 'break-all'
+    }
+
+    return <div style={{marginTop: '0.5rem'}}>
+        <Separator background={'var(--secondary)'} height={'0.1rem'} verticalMargin={'0.5rem'}/>
+        <div style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>
+            Đường dẫn lưu trữ
+        </div>
+        <div style={rowStyle}>
+            <div>Thư mục tải về (Download)</div>
+            <div style={pathTextStyle}>
+                {downloadPath || 'Chưa đặt (dùng mặc định của trình duyệt)'}
+            </div>
+            <AppButton
+                style={{width: 'fit-content'}}
+                onClick={async () => {
+                    await functions.chooseDownloadPath()
+                    setDownloadPath(localStorage.getItem(DOWNLOAD_PATH_KEY) || '')
+                }}
+            >
+                Chọn thư mục...
+            </AppButton>
+        </div>
+        <div style={rowStyle}>
+            <div>Kho lưu trữ (Ký Tên)</div>
+            <div style={pathTextStyle}>
+                {archivePath || 'Chưa đặt'}
+            </div>
+            <AppButton
+                style={{width: 'fit-content'}}
+                onClick={async () => {
+                    await functions.chooseSignaturePath()
+                    setArchivePath(localStorage.getItem(ARCHIVE_PATH_KEY) || '')
+                }}
+            >
+                Chọn thư mục...
+            </AppButton>
+        </div>
+    </div>
+}
 
 function Menu({data, functions, inPreview}: MenuProps) {
     const {t} = useTranslation(['composer', 'common', 'menu', 'logs', 'settings', 'confirm', 'question', 'tutorials'])
@@ -92,6 +162,8 @@ function Menu({data, functions, inPreview}: MenuProps) {
     const [songs] = useSongs()
     const [folders] = useFolders()
     const [selectedMenu, setSelectedMenu] = useState<MenuTabs>('Settings')
+    const [shopSheets, setShopSheets] = useState<ShopSheetListItem[]>([])
+    const [shopSheetsStatus, setShopSheetsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const {
         loadSong,
         changePage,
@@ -103,6 +175,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
         updateThisSong,
         downloadSong,
         chooseSignaturePath,
+        chooseDownloadPath,
         signSong
     } = functions
     const [theme] = useTheme()
@@ -114,6 +187,22 @@ function Menu({data, functions, inPreview}: MenuProps) {
         }
     }, {active: (isOpen && isVisible), ignoreFocusable: true})
 
+    const onLoadShopSheet = (song: any) => {
+        loadSong(song.serialize())
+    }
+    useEffect(() => {
+        if (shopSheetsStatus !== 'idle') return
+        setShopSheetsStatus('loading')
+        fetchShopSheetsList()
+            .then(list => {
+                setShopSheets(list)
+                setShopSheetsStatus('success')
+            })
+            .catch(e => {
+                console.error(e)
+                setShopSheetsStatus('error')
+            })
+    }, [shopSheetsStatus])
     useEffect(() => {
         KeyboardProvider.register("Escape", () => {
             setVisible(false)
@@ -178,8 +267,11 @@ function Menu({data, functions, inPreview}: MenuProps) {
                 <MemoizedIcon icon={FaTimes} className={'icon'}/>
             </MenuButton>
             <MenuButton
-                onClick={chooseSignaturePath}
-                ariaLabel='Chọn kho lưu trữ'
+                onClick={() => {
+                    setSelectedMenu('Settings')
+                    toggleMenu(true)
+                }}
+                ariaLabel='Cài đặt đường dẫn'
                 style={{marginTop: 'auto'}}
             >
                 <MemoizedIcon icon={FaFolderOpen} className={'icon'}/>
@@ -250,6 +342,22 @@ function Menu({data, functions, inPreview}: MenuProps) {
                         functions: songFunctions
                     }}
                 />
+                <div style={{marginTop: '0.8rem', fontWeight: 'bold'}}>
+                    Sheet Library
+                </div>
+                <div style={{marginTop: '0.3rem'}}>
+                    {shopSheetsStatus === 'loading' && <div>Loading...</div>}
+                    {shopSheetsStatus === 'error' && <div>Error loading sheet library</div>}
+                    {shopSheetsStatus === 'success' && shopSheets.map(sheet =>
+                        <ShopSheetRow
+                            key={sheet.id}
+                            data={sheet}
+                            theme={theme}
+                            onLoad={onLoadShopSheet}
+			    isSelected={false}
+                        />
+                    )}
+                </div>
                 <div className='row' style={{justifyContent: "flex-end", gap: '0.2rem'}}>
                     <FilePicker<SerializedSong | SerializedSong[]>
                         onPick={importFile}
@@ -295,7 +403,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
                 </div>
             </MenuPanel>
             <MenuPanel id="Settings">
-                <SettingsPane
+                                <SettingsPane
                     settings={data.settings}
                     onUpdate={handleSettingChange}
                     changeVolume={changeVolume}
@@ -324,6 +432,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
                     </Link>
 
                 </div>
+                <PathSettingsSection functions={{chooseSignaturePath, chooseDownloadPath}}/>
                 <DonateButton/>
             </MenuPanel>
         </MenuPanelWrapper>

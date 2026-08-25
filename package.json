@@ -12,6 +12,7 @@
     "@pixi/graphics-smooth": "^1.1.0",
     "@pixi/react": "^7.1.2",
     "@spotify/basic-pitch": "^1.0.1",
+    "@supabase/supabase-js": "^2.112.4",
     "@tauri-apps/api": "^1.5.3",
     "@tonejs/midi": "^2.0.28",
     "audiobuffer-to-wav": "^1.0.0",
