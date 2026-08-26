@@ -214,8 +214,8 @@ function Menu({data, functions, inPreview}: MenuProps) {
     }, [])
 
     const toggleMenu = useCallback((override?: boolean) => {
-        if (typeof override !== "boolean") override = undefined
-        setVisible((old) => override !== undefined ? override : !old)
+        // Sidebar luon hien, khong cho phep an di
+        setVisible(true)
     }, [])
 
     const removeSong = useCallback(async (name: string, id: string) => {
