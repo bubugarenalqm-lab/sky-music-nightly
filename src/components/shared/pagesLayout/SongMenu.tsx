@@ -22,6 +22,7 @@ interface SongMenuProps<T extends { data: SongStorable }> {
     baseType?: SongType
     exclude?: SongType[]
     onCreateFolder?: () => void
+    onSearchChange?: (value: string) => void
 }
 
 function isInFolder(folders: Folder[], song: SongStorable) {
@@ -37,6 +38,7 @@ export function SongMenu<T extends { data: SongStorable }>({
                                                                baseType,
                                                                exclude,
                                                                onCreateFolder,
+                                               onSearchChange,
                                                            }: SongMenuProps<T>) {
     const {t} = useTranslation(['common', 'menu'])
     const [noFolderRecorded, setNoFolderRecorded] = useState<Folder>()
@@ -53,6 +55,9 @@ export function SongMenu<T extends { data: SongStorable }>({
         if (searchValue === '') return setFilteredSongs(excluded)
         setFilteredSongs(searcher.search(searchValue))
     }, [songs, exclude, searchValue])
+    useEffect(() => {
+        onSearchChange?.(searchValue)
+    }, [searchValue, onSearchChange])
 
     useEffect(() => {
         setNoFolderRecorded(new Folder(t('menu:recorded'), null, filteredSongs.filter(song => !isInFolder(folders,song) && song.type === 'recorded')))

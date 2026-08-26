@@ -99,6 +99,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
     const [shopSheets, setShopSheets] = useState<ShopSheetListItem[]>([])
     const [shopSheetsStatus, setShopSheetsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [selectedSheetId, setSelectedSheetId] = useState<number | null>(null)
+    const [librarySearch, setLibrarySearch] = useState('')
     const {IS_MIDI_AVAILABLE} = useConfig()
     const [isPersistentStorage, setPeristentStorage] = useState(false)
     const [theme] = useTheme()
@@ -329,6 +330,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
                         folders,
                         functions: {removeSong, toggleMenu, downloadSong, renameSong}
                     }}
+                    onSearchChange={setLibrarySearch}
                 />
                 <div style={{marginTop: '0.8rem', fontWeight: 'bold'}}>
                     Sheet Library
@@ -336,7 +338,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
                 <div className='shop-sheets-wrapper' style={{marginTop: '0.3rem'}}>
                     {shopSheetsStatus === 'loading' && <div>Loading...</div>}
                     {shopSheetsStatus === 'error' && <div>Error loading sheet library</div>}
-                    {shopSheetsStatus === 'success' && shopSheets.map(sheet =>
+                    {shopSheetsStatus === 'success' && shopSheets.filter(sheet => librarySearch === '' || sheet.name.toLowerCase().includes(librarySearch.toLowerCase()) || sheet.author?.toLowerCase().includes(librarySearch.toLowerCase())).map(sheet =>
                         <ShopSheetRow
                             key={sheet.id}
                             data={sheet}

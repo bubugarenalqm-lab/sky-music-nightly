@@ -70,7 +70,7 @@ interface MenuProps {
         isRecordingAudio: boolean,
     }
     functions: {
-        loadSong: (song: SerializedSong) => void
+        loadSong: (song: SerializedSong, readOnly?: boolean, shopMeta?: any) => void
         renameSong: (newName: string, id: string) => void
         downloadSong: (song: SerializedSong, as: 'song' | 'midi') => void
         createNewSong: () => void
@@ -157,13 +157,15 @@ function PathSettingsSection({functions}: {
 function Menu({data, functions, inPreview}: MenuProps) {
     const {t} = useTranslation(['composer', 'common', 'menu', 'logs', 'settings', 'confirm', 'question', 'tutorials'])
     const [isOpen, setOpen] = useState(false)
-    const [isVisible, setVisible] = useState(false)
+    const [isVisible, setVisible] = useState(true)
     const {IS_MIDI_AVAILABLE} = useConfig()
     const [songs] = useSongs()
     const [folders] = useFolders()
     const [selectedMenu, setSelectedMenu] = useState<MenuTabs>('Settings')
     const [shopSheets, setShopSheets] = useState<ShopSheetListItem[]>([])
     const [shopSheetsStatus, setShopSheetsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [librarySearch, setLibrarySearch] = useState('')
+    const [selectedSheetId, setSelectedSheetId] = useState<number | null>(null)
     const {
         loadSong,
         changePage,
@@ -187,8 +189,9 @@ function Menu({data, functions, inPreview}: MenuProps) {
         }
     }, {active: (isOpen && isVisible), ignoreFocusable: true})
 
-    const onLoadShopSheet = (song: any) => {
-        loadSong(song.serialize())
+    const onLoadShopSheet = (song: any, meta: any, id: number) => {
+        loadSong(song.serialize(), true, meta)
+        setSelectedSheetId(id)
     }
     useEffect(() => {
         if (shopSheetsStatus !== 'idle') return
@@ -259,13 +262,9 @@ function Menu({data, functions, inPreview}: MenuProps) {
         setCurrent={setSelectedMenu}
         visible={isVisible}
     >
-        <div className="hamburger" onClick={() => setVisible(!isVisible)}>
-            <MemoizedIcon icon={FaBars}/>
-        </div>
+        
         <MenuSidebar>
-            <MenuButton onClick={() => toggleMenu()} className='close-menu' ariaLabel={t('menu:close_menu')}>
-                <MemoizedIcon icon={FaTimes} className={'icon'}/>
-            </MenuButton>
+            
             <MenuButton
                 onClick={() => {
                     setSelectedMenu('Settings')
@@ -348,13 +347,13 @@ function Menu({data, functions, inPreview}: MenuProps) {
                 <div style={{marginTop: '0.3rem'}}>
                     {shopSheetsStatus === 'loading' && <div>Loading...</div>}
                     {shopSheetsStatus === 'error' && <div>Error loading sheet library</div>}
-                    {shopSheetsStatus === 'success' && shopSheets.map(sheet =>
+                    {shopSheetsStatus === 'success' && shopSheets.filter(sheet => librarySearch === '' || sheet.name.toLowerCase().includes(librarySearch.toLowerCase()) || sheet.author?.toLowerCase().includes(librarySearch.toLowerCase())).map(sheet =>
                         <ShopSheetRow
                             key={sheet.id}
                             data={sheet}
                             theme={theme}
-                            onLoad={onLoadShopSheet}
-			    isSelected={false}
+                            onLoad={(song, meta) => onLoadShopSheet(song, meta, sheet.id)}
+			    isSelected={selectedSheetId === sheet.id}
                         />
                     )}
                 </div>
@@ -449,7 +448,7 @@ interface SongRowProps {
         removeSong: (name: string, id: string) => void
         renameSong: (newName: string, id: string) => void
         toggleMenu: (override: boolean) => void
-        loadSong: (song: SerializedSong) => void
+        loadSong: (song: SerializedSong, readOnly?: boolean, shopMeta?: any) => void
         downloadSong: (song: SerializedSong, as: 'midi' | 'song') => void
     }
 }
@@ -474,7 +473,6 @@ function SongRow({data, functions, theme, folders}: SongRowProps) {
             logger.hidePill()
             if (!song) return logger.error(t('logs:could_not_find_song'))
             loadSong(song)
-            toggleMenu(false)
         }}>
             {isRenaming
                 ? <input
@@ -541,7 +539,6 @@ function SongRow({data, functions, theme, folders}: SongRowProps) {
                         const song = await songService.getOneSerializedFromStorable(data)
                         if (!song) return logger.error(t('logs:could_not_find_song'))
                         loadSong(song)
-                        toggleMenu(false)
                     }}
                 >
                     <FaEdit style={{marginRight: "0.4rem"}} size={14}/>

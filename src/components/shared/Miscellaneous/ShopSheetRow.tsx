@@ -4,10 +4,15 @@ import {logger} from '$stores/LoggerStore'
 import {songService} from '$lib/Services/SongService'
 import {fetchShopSheetData, ShopSheetListItem} from '$lib/Services/SupabaseService'
 import type {Theme} from '$stores/ThemeStore/ThemeProvider'
+export type ShopSheetMeta = {
+    author: string | null
+    transcribedBy: string
+    bpm: number
+}
 interface ShopSheetRowProps {
     data: ShopSheetListItem
     theme: Theme
-    onLoad: (song: any) => void
+    onLoad: (song: any, meta: ShopSheetMeta) => void
     isSelected: boolean
 }
 export default function ShopSheetRow({data, theme, onLoad, isSelected}: ShopSheetRowProps) {
@@ -20,7 +25,11 @@ export default function ShopSheetRow({data, theme, onLoad, isSelected}: ShopShee
             setFetching(false)
             if (!row) return logger.error('Song not found')
             const parsed = songService.parseSong(row.data)
-            onLoad(parsed)
+            onLoad(parsed, {
+                author: row.author,
+                transcribedBy: row.transcribed_by,
+                bpm: row.bpm
+            })
         } catch (e) {
             setFetching(false)
             console.error(e)
@@ -30,6 +39,5 @@ export default function ShopSheetRow({data, theme, onLoad, isSelected}: ShopShee
     return <div className={`shop-sheet-row ${isSelected ? 'selected' : ''}`} onClick={load}>
         {fetching ? <FaSpinner className='spin'/> : <FaMusic/>}
         <span>{data.name}</span>
-        {data.author && <span style={{opacity: 0.7, fontSize: '0.8rem'}}>- {data.author}</span>}
     </div>
 }

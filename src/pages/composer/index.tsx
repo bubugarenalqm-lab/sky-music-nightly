@@ -60,6 +60,7 @@ interface ComposerState {
     isPlaying: boolean
     theme: Theme
     isReadOnly: boolean
+    shopSheetMeta: {author: string | null, transcribedBy: string, bpm: number} | null
 }
 
 type PageProps = {
@@ -98,7 +99,8 @@ class Composer extends Component<ComposerProps, ComposerState> {
             isMidiVisible: this.props.showMidi || false,
             isRecordingAudio: false,
             theme: ThemeProvider,
-            isReadOnly: false
+            isReadOnly: false,
+            shopSheetMeta: null
         }
         this.state.song.bpm = settings.bpm.value
         this.mounted = false
@@ -508,7 +510,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         this.setState({song: added, layer: 0})
         Analytics.songEvent({type: 'create'})
     }
-    loadSong = async (song: SerializedSong | ComposedSong, readOnly: boolean = false) => {
+    loadSong = async (song: SerializedSong | ComposedSong, readOnly: boolean = false, shopMeta: {author: string | null, transcribedBy: string, bpm: number} | null = null) => {
         try {
             const state = this.state
             let parsed: ComposedSong | null = null
@@ -556,7 +558,8 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 song: parsed,
                 settings: {...settings},
                 selectedColumns: [],
-                isReadOnly: readOnly
+                isReadOnly: readOnly,
+                shopSheetMeta: shopMeta
             }, () => this.syncInstruments())
         } catch (e) {
             console.error(e)
@@ -1149,6 +1152,9 @@ signSong = async () => {
                 <div className='text-ellipsis'>
                     {song.name}
                 </div>
+                {this.state.shopSheetMeta?.author && <div className='text-ellipsis'>Author: {this.state.shopSheetMeta.author}</div>}
+                {this.state.shopSheetMeta && <div className='text-ellipsis'>Transcribed: {this.state.shopSheetMeta.transcribedBy}</div>}
+                {this.state.shopSheetMeta && <div>BPM: {this.state.shopSheetMeta.bpm}</div>}
                 <div>
                     {formatMs(songLength.current)}
                     /
