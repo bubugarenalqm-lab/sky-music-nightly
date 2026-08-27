@@ -832,6 +832,7 @@ select {
 
     .composer-grid {
         width: 100%;
+        margin-left: var(--menu-size, 4rem);
     }
 
     .composer-left-control {
