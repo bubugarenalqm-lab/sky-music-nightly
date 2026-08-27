@@ -182,11 +182,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
     } = functions
     const [theme] = useTheme()
     const menuRef = useClickOutside<HTMLDivElement>((e) => {
-        if (isMobile()) {
-            setVisible(false)
-        } else {
-            setOpen(false)
-        }
+        setOpen(false)
     }, {active: (isOpen && isVisible), ignoreFocusable: true})
 
     const onLoadShopSheet = (song: any, meta: any, id: number) => {
