@@ -331,6 +331,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
                     SongComponent={SongRow}
                     style={{marginTop: '0.6rem'}}
                     onCreateFolder={createFolder}
+                    onSearchChange={setLibrarySearch}
                     componentProps={{
                         theme,
                         folders,

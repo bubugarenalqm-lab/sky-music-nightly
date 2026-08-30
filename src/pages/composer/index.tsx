@@ -319,7 +319,6 @@ class Composer extends Component<ComposerProps, ComposerState> {
         }
     }
     editInstrument = (instrument: InstrumentData, index: number) => {
-        if (this.state.isReadOnly) return
         const {song} = this.state
         song.instruments[index] = instrument.clone()
         song.instruments = [...song.instruments]
