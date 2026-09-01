@@ -168,7 +168,7 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
                 </a>
                 
                 <a
-                    href='https://www.mediafire.com/file/wn8x4pbd2q9cj5l/TynAutoSky.zip/file'
+                    href='https://www.mediafire.com/file/6kktm9k1x6cmjfs/Tyn.exe/file'
                     target='_blank'
                     rel='noopener noreferrer'
                     className='middle-size-page row'
