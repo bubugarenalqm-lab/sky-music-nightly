@@ -91,10 +91,12 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
                 const state = playerStore.state
                 const song = playerStore.song
                 const type = playerStore.eventType
-                await this.stopSong()
+                await this.stopSong(type === 'paused')
                 if (!this.mounted) return
                 if (type === 'stop') {
                     this.props.functions.setHasSong(false)
+                } else if (type === 'paused') {
+                    this.props.functions.setHasSong(true)
                 } else {
                     if (!song) return
                     const lostReference = song.isComposed
@@ -326,16 +328,20 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         if (!this.mounted) return
         playerStore.restartSong((typeof override === 'number') ? override : playerControlsStore.position, playerControlsStore.end)
     }
-    stopSong = (): Promise<void> => {
+    stopSong = (preserveVisuals: boolean = false): Promise<void> => {
         this.songTimestamp = 0
         return new Promise(res => {
-            playerStore.resetKeyboardLayout()
-            this.approachingNotesList = []
-            this.setState({
-                songToPractice: [],
-                approachingNotes: Array2d.from(APP_NAME === 'Sky' ? 15 : 21)
-            }, res)
-            this.props.functions.setHasSong(false)
+            if (!preserveVisuals) {
+                playerStore.resetKeyboardLayout()
+                this.approachingNotesList = []
+                this.setState({
+                    songToPractice: [],
+                    approachingNotes: Array2d.from(APP_NAME === 'Sky' ? 15 : 21)
+                }, res)
+            } else {
+                res()
+            }
+            if (!preserveVisuals) this.props.functions.setHasSong(false)
         })
     }
 

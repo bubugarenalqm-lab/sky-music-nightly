@@ -105,8 +105,8 @@ function Menu({functions, data, inPreview}: MenuProps) {
     const [theme] = useTheme()
     const [folders] = useFolders()
     const {handleSettingChange, addSong, removeSong, renameSong} = functions
-    const onLoadShopSheet = (song: RecordedSong | ComposedSong, id: number) => {
-        playerStore.play(song)
+    const onLoadShopSheet = (song: RecordedSong | ComposedSong, id: number, meta?: {author: string | null, transcribedBy: string, bpm: number}) => {
+        playerStore.load(song, meta)
         setSelectedSheetId(id)
     }
     useEffect(() => {
@@ -344,7 +344,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
                             data={sheet}
                             theme={theme}
                             isSelected={selectedSheetId === sheet.id}
-                            onLoad={(song) => onLoadShopSheet(song, sheet.id)}
+                            onLoad={(song, meta) => onLoadShopSheet(song, sheet.id, meta)}
                         />
                     )}
                 </div>
@@ -453,7 +453,7 @@ function Menu({functions, data, inPreview}: MenuProps) {
                                         key={song.file}
                                         data={song}
                                         importSong={addSong}
-                                        onClick={playerStore.play}
+                                        onClick={(song) => playerStore.load(song)}
                                     />
                                 )
                                 : <div className='library-search-result-text'>
@@ -514,7 +514,7 @@ function SongRow({data, functions, theme, folders}: SongRowProps) {
     return <div className="song-row">
         <div className={`song-name ${hasTooltip(true)}`} onClick={async () => {
             if (isRenaming) return
-            playerStore.play(await songService.fromStorableSong(data) as RecordedOrComposed, 0)
+            playerStore.load(await songService.fromStorableSong(data) as RecordedOrComposed)
             toggleMenu(false)
         }}>
             {isRenaming

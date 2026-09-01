@@ -1,6 +1,6 @@
 import {SPEED_CHANGERS} from "$config"
 import {MemoizedIcon} from "$cmp/shared/Utility/Memoized";
-import {FaEye, FaEyeSlash, FaStop} from "react-icons/fa";
+import {FaEye, FaEyeSlash, FaStop, FaPlay} from "react-icons/fa";
 import {ChangeEvent, memo, useCallback, useEffect, useState} from "react";
 import {playerStore} from "$stores/PlayerStore";
 import {playerControlsStore} from "$stores/PlayerControlsStore";
@@ -62,6 +62,16 @@ function _PlayerSongControls({
         setNeedsRefresh(false)
     }, [songData.key]);
     return <>
+        {(songData.song || songData.pausedSong) &&
+            <div className="song-info">
+                <div className='text-ellipsis'>
+                    {(songData.song ?? songData.pausedSong)!.name}
+                </div>
+                {(songData.shopSheetMeta ?? songData.pausedShopSheetMeta)?.author && <div className='text-ellipsis'>Author: {(songData.shopSheetMeta ?? songData.pausedShopSheetMeta)!.author}</div>}
+                {(songData.shopSheetMeta ?? songData.pausedShopSheetMeta) && <div className='text-ellipsis'>Transcribed: {(songData.shopSheetMeta ?? songData.pausedShopSheetMeta)!.transcribedBy}</div>}
+                <div>BPM: {(songData.shopSheetMeta ?? songData.pausedShopSheetMeta)?.bpm ?? ((songData.song ?? songData.pausedSong) as any).bpm}</div>
+            </div>
+        }
         {songData.eventType === 'approaching' &&
             <Score/>
         }
@@ -123,15 +133,17 @@ function _PlayerSongControls({
                     </div>
                     <IconButton
                         onClick={() => {
-                            playerStore.resetSong()
-                            playerControlsStore.clearPages()
-                            playerControlsStore.resetScore()
+                            if (songData.pausedSong) {
+                                playerStore.resume()
+                            } else {
+                                playerStore.pause(playerControlsStore.current, playerControlsStore.end)
+                            }
                         }}
                         style={{flex: 1}}
-                        tooltip={t('common:stop')}
-                        ariaLabel={t("stop_song")}
+                        tooltip={songData.pausedSong ? t('common:play') : t('common:stop')}
+                        ariaLabel={songData.pausedSong ? t("common:play") : t("stop_song")}
                     >
-                        <MemoizedIcon icon={FaStop}/>
+                        <MemoizedIcon icon={songData.pausedSong ? FaPlay : FaStop}/>
                     </IconButton>
                 </div>
 

@@ -558,7 +558,8 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 settings: {...settings},
                 selectedColumns: [],
                 isReadOnly: readOnly,
-                shopSheetMeta: shopMeta
+                shopSheetMeta: shopMeta,
+                isPlaying: false
             }, () => this.syncInstruments())
         } catch (e) {
             console.error(e)

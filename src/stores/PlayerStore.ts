@@ -4,9 +4,10 @@ import {ComposedSong} from "$lib/Songs/ComposedSong";
 import {RecordedSong} from "$lib/Songs/RecordedSong";
 import {action, makeObservable, observable} from "mobx";
 
-type eventType = "play" | "practice" | "approaching" | "stop"
+type eventType = "play" | "practice" | "approaching" | "stop" | "paused"
 type SongTypes = RecordedSong | ComposedSong | null
 type SongTypesNonNull = RecordedSong | ComposedSong
+type ShopSheetMeta = {author: string | null, transcribedBy: string, bpm: number}
 type PlayerStoreState = {
     key: number
     song: SongTypes,
@@ -14,6 +15,11 @@ type PlayerStoreState = {
     eventType: eventType,
     start: number,
     end: number,
+    shopSheetMeta: ShopSheetMeta | null,
+    pausedSong: SongTypesNonNull | null,
+    pausedPosition: number,
+    pausedEnd: number | undefined,
+    pausedShopSheetMeta: ShopSheetMeta | null,
 }
 
 class PlayerStore {
@@ -24,7 +30,12 @@ class PlayerStore {
         playId: 0,
         eventType: 'stop',
         start: 0,
-        end: 0
+        end: 0,
+        shopSheetMeta: null,
+        pausedSong: null,
+        pausedPosition: 0,
+        pausedEnd: undefined,
+        pausedShopSheetMeta: null
     }
     @observable
     keyboard: ObservableNote[] = []
@@ -68,14 +79,15 @@ class PlayerStore {
     setState = (state: Partial<PlayerStoreState>) => {
         Object.assign(this.state, state)
     }
-    play = (song: SongTypesNonNull, start: number = 0, end?: number) => {
+    play = (song: SongTypesNonNull, start: number = 0, end?: number, shopMeta?: ShopSheetMeta | null) => {
         this.setState({
             song,
             start,
             eventType: 'play',
             end,
             key: this.state.key + 1,
-            playId: this.state.playId + 1
+            playId: this.state.playId + 1,
+            shopSheetMeta: shopMeta ?? null
         })
     }
     practice = (song: SongTypesNonNull, start: number = 0, end: number) => {
@@ -98,6 +110,38 @@ class PlayerStore {
             playId: this.state.playId + 1
         })
     }
+    pause = (position: number, end?: number) => {
+        const {song, shopSheetMeta} = this.state
+        if (!song) return
+        this.setState({
+            pausedSong: song,
+            pausedPosition: position,
+            pausedEnd: end,
+            pausedShopSheetMeta: shopSheetMeta,
+            song: null,
+            eventType: 'paused',
+            key: this.state.key + 1,
+            playId: 0
+        })
+    }
+    resume = () => {
+        const {pausedSong, pausedPosition, pausedEnd, pausedShopSheetMeta} = this.state
+        if (!pausedSong) return
+        this.play(pausedSong, pausedPosition, pausedEnd, pausedShopSheetMeta)
+        this.setState({pausedSong: null, pausedPosition: 0, pausedEnd: undefined, pausedShopSheetMeta: null})
+    }
+    load = (song: SongTypesNonNull, shopMeta?: ShopSheetMeta | null) => {
+        this.setState({
+            pausedSong: song,
+            pausedPosition: 0,
+            pausedEnd: undefined,
+            pausedShopSheetMeta: shopMeta ?? null,
+            song: null,
+            eventType: 'paused',
+            key: this.state.key + 1,
+            playId: 0
+        })
+    }
     resetSong = () => {
         this.setState({
             song: null,
@@ -105,7 +149,12 @@ class PlayerStore {
             start: 0,
             end: 0,
             key: this.state.key + 1,
-            playId: 0
+            playId: 0,
+            shopSheetMeta: null,
+            pausedSong: null,
+            pausedPosition: 0,
+            pausedEnd: undefined,
+            pausedShopSheetMeta: null
         })
     }
     restartSong = (start: number, end: number) => {
