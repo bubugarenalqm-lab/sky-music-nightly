@@ -168,7 +168,7 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
                 </a>
                 
                 <a
-                    href='https://www.mediafire.com/file/j1a9s0m7iu7jzh6/Tyn.exe/file'
+                    href='https://www.mediafire.com/file/xvwxc1epe3m8gp5/Tyn.exe/file'
                     target='_blank'
                     rel='noopener noreferrer'
                     className='middle-size-page row'
