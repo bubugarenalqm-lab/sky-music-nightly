@@ -1,4 +1,4 @@
-import {memo, useCallback, useEffect, useState} from 'react'
+﻿import {memo, useCallback, useEffect, useState} from 'react'
 import {
     FaBars,
     FaClone,
@@ -119,12 +119,12 @@ function PathSettingsSection({functions}: {
     return <div style={{marginTop: '0.5rem'}}>
         <Separator background={'var(--secondary)'} height={'0.1rem'} verticalMargin={'0.5rem'}/>
         <div style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>
-            Đường dẫn lưu trữ
+            ÄÆ°á»ng dáº«n lÆ°u trá»¯
         </div>
         <div style={rowStyle}>
-            <div>Thư mục tải về (Download)</div>
+            <div>ThÆ° má»¥c táº£i vá» (Download)</div>
             <div style={pathTextStyle}>
-                {downloadPath || 'Chưa đặt (dùng mặc định của trình duyệt)'}
+                {downloadPath || 'ChÆ°a Ä‘áº·t (dĂ¹ng máº·c Ä‘á»‹nh cá»§a trĂ¬nh duyá»‡t)'}
             </div>
             <AppButton
                 style={{width: 'fit-content'}}
@@ -133,13 +133,13 @@ function PathSettingsSection({functions}: {
                     setDownloadPath(localStorage.getItem(DOWNLOAD_PATH_KEY) || '')
                 }}
             >
-                Chọn thư mục...
+                Chá»n thÆ° má»¥c...
             </AppButton>
         </div>
         <div style={rowStyle}>
-            <div>Kho lưu trữ (Ký Tên)</div>
+            <div>Kho lÆ°u trá»¯ (KĂ½ TĂªn)</div>
             <div style={pathTextStyle}>
-                {archivePath || 'Chưa đặt'}
+                {archivePath || 'ChÆ°a Ä‘áº·t'}
             </div>
             <AppButton
                 style={{width: 'fit-content'}}
@@ -148,7 +148,7 @@ function PathSettingsSection({functions}: {
                     setArchivePath(localStorage.getItem(ARCHIVE_PATH_KEY) || '')
                 }}
             >
-                Chọn thư mục...
+                Chá»n thÆ° má»¥c...
             </AppButton>
         </div>
     </div>
@@ -266,14 +266,14 @@ function Menu({data, functions, inPreview}: MenuProps) {
                     setSelectedMenu('Settings')
                     toggleMenu(true)
                 }}
-                ariaLabel='Cài đặt đường dẫn'
+                ariaLabel='CĂ i Ä‘áº·t Ä‘Æ°á»ng dáº«n'
                 style={{marginTop: 'auto'}}
             >
                 <MemoizedIcon icon={FaFolderOpen} className={'icon'}/>
             </MenuButton>
             <MenuButton
                 onClick={signSong}
-                ariaLabel='Ký tên'
+                ariaLabel='KĂ½ tĂªn'
             >
                 <MemoizedIcon icon={FaStamp} className={'icon'}/>
             </MenuButton>
@@ -341,7 +341,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
                 <div style={{marginTop: '0.8rem', fontWeight: 'bold'}}>
                     Sheet Library
                 </div>
-                <div style={{marginTop: '0.3rem'}}>
+                <div style={{marginTop: '0.3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.6rem'}}>
                     {shopSheetsStatus === 'loading' && <div>Loading...</div>}
                     {shopSheetsStatus === 'error' && <div>Error loading sheet library</div>}
                     {shopSheetsStatus === 'success' && shopSheets.filter(sheet => librarySearch === '' || sheet.name.toLowerCase().includes(librarySearch.toLowerCase()) || sheet.author?.toLowerCase().includes(librarySearch.toLowerCase())).map(sheet =>

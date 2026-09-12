@@ -1,0 +1,180 @@
+﻿
+  src\components\pages\Player\PlayerKeyboard.tsx:5:import {Array2d, clamp, delay, groupArrayEvery} from 
+"$lib/utils/Utilities"
+  src\components\pages\Player\PlayerKeyboard.tsx:6:import Analytics from '$lib/Analytics';
+> src\components\pages\Player\PlayerKeyboard.tsx:7:import {playerControlsStore} from '$stores/PlayerControlsStore'
+  src\components\pages\Player\PlayerKeyboard.tsx:8:import {ApproachingNote, RecordedNote} from '$lib/Songs/SongClasses'
+  src\components\pages\Player\PlayerKeyboard.tsx:9:import {Instrument, ObservableNote} from '$lib/audio/Instrument'
+  src\components\pages\Player\PlayerKeyboard.tsx:40:
+  src\components\pages\Player\PlayerKeyboard.tsx:41:interface KeyboardPlayerState {
+> src\components\pages\Player\PlayerKeyboard.tsx:42:    playTimestamp: number
+  src\components\pages\Player\PlayerKeyboard.tsx:43:    songToPractice: Chunk[]
+  src\components\pages\Player\PlayerKeyboard.tsx:44:    approachingNotes: ApproachingNote[][]
+  src\components\pages\Player\PlayerKeyboard.tsx:54:    tickInterval: number = 0
+  src\components\pages\Player\PlayerKeyboard.tsx:55:    mounted: boolean
+> src\components\pages\Player\PlayerKeyboard.tsx:56:    songTimestamp = 0
+  src\components\pages\Player\PlayerKeyboard.tsx:57:    cleanup: (() => void)[] = []
+  src\components\pages\Player\PlayerKeyboard.tsx:58:    timeouts: Timer[] = []
+  src\components\pages\Player\PlayerKeyboard.tsx:62:        super(props)
+  src\components\pages\Player\PlayerKeyboard.tsx:63:        this.state = {
+> src\components\pages\Player\PlayerKeyboard.tsx:64:            playTimestamp: Date.now(),
+  src\components\pages\Player\PlayerKeyboard.tsx:65:            songToPractice: [],
+  src\components\pages\Player\PlayerKeyboard.tsx:66:            approachingNotes: Array2d.from(APP_NAME === 'Sky' ? 15 
+: 21),
+  src\components\pages\Player\PlayerKeyboard.tsx:88:            //this is because mobx calls for each prop changed 
+while i want to batch it and execute all at once
+  src\components\pages\Player\PlayerKeyboard.tsx:89:            if (this.debouncedStateUpdate) 
+clearTimeout(this.debouncedStateUpdate)
+> src\components\pages\Player\PlayerKeyboard.tsx:90:            this.debouncedStateUpdate = setTimeout(async () => {
+  src\components\pages\Player\PlayerKeyboard.tsx:91:                const state = playerStore.state
+  src\components\pages\Player\PlayerKeyboard.tsx:92:                const song = playerStore.song
+  src\components\pages\Player\PlayerKeyboard.tsx:104:                        : song.clone()
+  src\components\pages\Player\PlayerKeyboard.tsx:105:
+> src\components\pages\Player\PlayerKeyboard.tsx:106:                    lostReference.timestamp = Date.now()
+  src\components\pages\Player\PlayerKeyboard.tsx:107:                    const end = state.end || 
+lostReference?.notes?.length || 0
+  src\components\pages\Player\PlayerKeyboard.tsx:108:                    if (type === 'play') {
+  src\components\pages\Player\PlayerKeyboard.tsx:117:                    this.props.functions.setHasSong(true)
+  src\components\pages\Player\PlayerKeyboard.tsx:118:                    Analytics.songEvent({type})
+> src\components\pages\Player\PlayerKeyboard.tsx:119:                    playerControlsStore.setState({
+  src\components\pages\Player\PlayerKeyboard.tsx:120:                        size: lostReference?.notes?.length || 1,
+  src\components\pages\Player\PlayerKeyboard.tsx:121:                        position: state.start,
+  src\components\pages\Player\PlayerKeyboard.tsx:143:    componentWillUnmount() {
+  src\components\pages\Player\PlayerKeyboard.tsx:144:        this.cleanup.forEach(d => d())
+> src\components\pages\Player\PlayerKeyboard.tsx:145:        this.songTimestamp = 0
+  src\components\pages\Player\PlayerKeyboard.tsx:146:        playerStore.resetSong()
+  src\components\pages\Player\PlayerKeyboard.tsx:147:        this.mounted = false
+  src\components\pages\Player\PlayerKeyboard.tsx:178:            const note = song.notes[i]
+  src\components\pages\Player\PlayerKeyboard.tsx:179:            const obj = new ApproachingNote({
+> src\components\pages\Player\PlayerKeyboard.tsx:180:                time: Song.roundTime((note.time - startOffset) / 
+speedChanger.value + startDelay),
+  src\components\pages\Player\PlayerKeyboard.tsx:181:                index: note.index
+  src\components\pages\Player\PlayerKeyboard.tsx:182:            })
+  src\components\pages\Player\PlayerKeyboard.tsx:185:        await delay(2000) //add an initial delay to let the user 
+prepare
+  src\components\pages\Player\PlayerKeyboard.tsx:186:        //not sure why i even save the song, i dont use it 
+anywhere
+> src\components\pages\Player\PlayerKeyboard.tsx:187:        //playerControlsStore.setSong(song)
+> src\components\pages\Player\PlayerKeyboard.tsx:188:        playerControlsStore.clearPages()
+> src\components\pages\Player\PlayerKeyboard.tsx:189:        playerControlsStore.resetScore()
+  src\components\pages\Player\PlayerKeyboard.tsx:190:        this.setState({
+  src\components\pages\Player\PlayerKeyboard.tsx:191:            approachingNotes: Array2d.from(APP_NAME === 'Sky' ? 
+15 : 21),
+  src\components\pages\Player\PlayerKeyboard.tsx:201:        const notes = this.approachingNotesList
+  src\components\pages\Player\PlayerKeyboard.tsx:202:        notes.forEach(note => {
+> src\components\pages\Player\PlayerKeyboard.tsx:203:            note.time -= this.tickTime
+  src\components\pages\Player\PlayerKeyboard.tsx:204:        })
+  src\components\pages\Player\PlayerKeyboard.tsx:205:        let hasChanges = false
+  src\components\pages\Player\PlayerKeyboard.tsx:223:            for (let i = 0; i < approachingNotes.length; i++) {
+  src\components\pages\Player\PlayerKeyboard.tsx:224:                const note = approachingNotes[i]
+> src\components\pages\Player\PlayerKeyboard.tsx:225:                note.time -= this.tickTime
+  src\components\pages\Player\PlayerKeyboard.tsx:226:                if (note.clicked) {
+> src\components\pages\Player\PlayerKeyboard.tsx:227:                    if (note.time < this.approachRate / 3) {
+> src\components\pages\Player\PlayerKeyboard.tsx:228:                        playerControlsStore.increaseScore(true, 
+speedChanger.value)
+  src\components\pages\Player\PlayerKeyboard.tsx:229:                    } else {
+> src\components\pages\Player\PlayerKeyboard.tsx:230:                        playerControlsStore.increaseScore(false)
+  src\components\pages\Player\PlayerKeyboard.tsx:231:                    }
+> src\components\pages\Player\PlayerKeyboard.tsx:232:                    note.time = -1 //so that it can be removed 
+after
+  src\components\pages\Player\PlayerKeyboard.tsx:233:                }
+> src\components\pages\Player\PlayerKeyboard.tsx:234:                if (note.time < 0) {
+  src\components\pages\Player\PlayerKeyboard.tsx:235:                    if (!note.clicked) {
+> src\components\pages\Player\PlayerKeyboard.tsx:236:                        playerControlsStore.increaseScore(false)
+  src\components\pages\Player\PlayerKeyboard.tsx:237:                    }
+  src\components\pages\Player\PlayerKeyboard.tsx:238:                    approachingNotes.splice(i, 1)
+  src\components\pages\Player\PlayerKeyboard.tsx:244:        })
+  src\components\pages\Player\PlayerKeyboard.tsx:245:        if (!hasChanges) return
+> src\components\pages\Player\PlayerKeyboard.tsx:246:        if(playerControlsStore.current + removed === 
+playerControlsStore.size) {
+  src\components\pages\Player\PlayerKeyboard.tsx:247:            this.setTicker(false)
+  src\components\pages\Player\PlayerKeyboard.tsx:248:            this.props.functions.onSongFinished()
+  src\components\pages\Player\PlayerKeyboard.tsx:249:        }
+> src\components\pages\Player\PlayerKeyboard.tsx:250:        
+playerControlsStore.setCurrent(playerControlsStore.current + removed)
+  src\components\pages\Player\PlayerKeyboard.tsx:251:        this.setState({
+  src\components\pages\Player\PlayerKeyboard.tsx:252:            approachingNotes: stateNotes.map(arr => arr.slice()), 
+//removes ref
+  src\components\pages\Player\PlayerKeyboard.tsx:257:        this.mode = 'play'
+  src\components\pages\Player\PlayerKeyboard.tsx:258:        end = end ? end : song.notes.length
+> src\components\pages\Player\PlayerKeyboard.tsx:259:        this.songTimestamp = song.timestamp
+  src\components\pages\Player\PlayerKeyboard.tsx:260:        const {keyboard} = this.state
+  src\components\pages\Player\PlayerKeyboard.tsx:261:        const { visualSheetSize} = this.props.data
+  src\components\pages\Player\PlayerKeyboard.tsx:262:        const notes = 
+this.applySpeedChange(song.notes).slice(start, end)
+  src\components\pages\Player\PlayerKeyboard.tsx:263:        const mergedNotes = 
+RecordedSong.mergeNotesIntoChunks(notes.map(n => n.clone()))
+> src\components\pages\Player\PlayerKeyboard.tsx:264:        playerControlsStore.setPages(groupArrayEvery(mergedNotes, 
+visualSheetSize))
+  src\components\pages\Player\PlayerKeyboard.tsx:265:
+  src\components\pages\Player\PlayerKeyboard.tsx:266:        const violinLayers = song.instruments
+  src\components\pages\Player\PlayerKeyboard.tsx:295:            previous = notes[i].time
+  src\components\pages\Player\PlayerKeyboard.tsx:296:            if (delayTime > 16) await delay(delayTime + 
+delayOffset)
+> src\components\pages\Player\PlayerKeyboard.tsx:297:            if (!this.mounted || this.songTimestamp !== 
+song.timestamp) return
+  src\components\pages\Player\PlayerKeyboard.tsx:298:            this.handleClick(keyboard[notes[i].index], 
+notes[i].layer, nextSustainMs[i])
+> src\components\pages\Player\PlayerKeyboard.tsx:299:            if (chunkPlayedNotes >= 
+(playerControlsStore.currentChunk?.notes.length ?? 0)) {
+  src\components\pages\Player\PlayerKeyboard.tsx:300:                chunkPlayedNotes = 1
+> src\components\pages\Player\PlayerKeyboard.tsx:301:                
+playerControlsStore.incrementChunkPositionAndSetCurrent(start + i + 1)
+  src\components\pages\Player\PlayerKeyboard.tsx:302:            } else {
+  src\components\pages\Player\PlayerKeyboard.tsx:303:                chunkPlayedNotes++
+> src\components\pages\Player\PlayerKeyboard.tsx:304:                playerControlsStore.setCurrent(start + i + 1)
+  src\components\pages\Player\PlayerKeyboard.tsx:305:            }
+  src\components\pages\Player\PlayerKeyboard.tsx:306:            delayOffset = startTime + previous - startOffset - 
+Date.now()
+  src\components\pages\Player\PlayerKeyboard.tsx:311:        const {speedChanger} = this.props.data
+  src\components\pages\Player\PlayerKeyboard.tsx:312:        return notes.map(note => {
+> src\components\pages\Player\PlayerKeyboard.tsx:313:            note.time = note.time / speedChanger.value
+  src\components\pages\Player\PlayerKeyboard.tsx:314:            return note
+  src\components\pages\Player\PlayerKeyboard.tsx:315:        })
+  src\components\pages\Player\PlayerKeyboard.tsx:340:        })
+  src\components\pages\Player\PlayerKeyboard.tsx:341:        this.props.functions.setHasSong(true)
+> src\components\pages\Player\PlayerKeyboard.tsx:342:        playerControlsStore.setPages(groupArrayEvery(chunks, 
+visualSheetSize))
+  src\components\pages\Player\PlayerKeyboard.tsx:343:        this.setState({
+  src\components\pages\Player\PlayerKeyboard.tsx:344:            songToPractice: chunks
+  src\components\pages\Player\PlayerKeyboard.tsx:349:        await this.stopSong()
+  src\components\pages\Player\PlayerKeyboard.tsx:350:        if (!this.mounted) return
+> src\components\pages\Player\PlayerKeyboard.tsx:351:        playerStore.restartSong((typeof override === 'number') ? 
+override : playerControlsStore.position, playerControlsStore.end)
+  src\components\pages\Player\PlayerKeyboard.tsx:352:    }
+  src\components\pages\Player\PlayerKeyboard.tsx:353:    stopSong = (preserveVisuals: boolean = false): Promise<void> 
+=> {
+> src\components\pages\Player\PlayerKeyboard.tsx:354:        this.songTimestamp = 0
+  src\components\pages\Player\PlayerKeyboard.tsx:355:        return new Promise(res => {
+  src\components\pages\Player\PlayerKeyboard.tsx:356:            if (!preserveVisuals) {
+  src\components\pages\Player\PlayerKeyboard.tsx:378:        if (approachingNote) {
+  src\components\pages\Player\PlayerKeyboard.tsx:379:            approachingNote.clicked = true
+> src\components\pages\Player\PlayerKeyboard.tsx:380:            if (approachingNote.time < this.approachRate / 3) 
+return "approach-correct"
+  src\components\pages\Player\PlayerKeyboard.tsx:381:        }
+  src\components\pages\Player\PlayerKeyboard.tsx:382:        return "approach-wrong"
+  src\components\pages\Player\PlayerKeyboard.tsx:391:                if (songToPractice[0].notes.length === 0) {
+  src\components\pages\Player\PlayerKeyboard.tsx:392:                    songToPractice.shift()
+> src\components\pages\Player\PlayerKeyboard.tsx:393:                    
+playerControlsStore.incrementChunkPositionAndSetCurrent()
+  src\components\pages\Player\PlayerKeyboard.tsx:394:                }
+  src\components\pages\Player\PlayerKeyboard.tsx:395:                if(songToPractice.length === 0) {
+  src\components\pages\Player\PlayerKeyboard.tsx:413:                    }
+  src\components\pages\Player\PlayerKeyboard.tsx:414:                }
+> src\components\pages\Player\PlayerKeyboard.tsx:415:                playerControlsStore.incrementCurrent()
+  src\components\pages\Player\PlayerKeyboard.tsx:416:                this.setState({songToPractice})
+  src\components\pages\Player\PlayerKeyboard.tsx:417:            }
+  src\components\pages\Player\PlayerKeyboard.tsx:439:        if (playerStore.eventType === 'approaching') {
+  src\components\pages\Player\PlayerKeyboard.tsx:440:            playerStore.setNoteState(note.index, {status})
+> src\components\pages\Player\PlayerKeyboard.tsx:441:            if (status === 'approach-wrong') 
+playerControlsStore.increaseScore(false)
+  src\components\pages\Player\PlayerKeyboard.tsx:442:        }
+  src\components\pages\Player\PlayerKeyboard.tsx:443:        //TODO could add this to the player store
+  src\components\pages\Player\PlayerKeyboard.tsx:444:        if (this.timeouts[note.index] as number > 0 && 
+playerStore.eventType === 'play') clearTimeout(this.timeouts[note.index])
+> src\components\pages\Player\PlayerKeyboard.tsx:445:        this.timeouts[note.index] = setTimeout(() => {
+  src\components\pages\Player\PlayerKeyboard.tsx:446:            this.timeouts[note.index] = 0
+  src\components\pages\Player\PlayerKeyboard.tsx:447:            if (!['clicked', 'approach-wrong', 
+'approach-correct'].includes(keyboard[note.index].status)) return
+
+

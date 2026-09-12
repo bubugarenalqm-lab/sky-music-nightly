@@ -104,25 +104,6 @@ export function InstrumentSettingsPopup({
             </Select>
         </div>
 
-        <div className="row space-between" style={{marginTop: '0.4rem'}}>
-            {t('note_icon')}
-            <select
-                className={s.select}
-                style={{padding: '0.3rem', width: '8rem'}}
-                value={instrument.icon}
-                onChange={e => {
-                    onChange(instrument.set({icon: e.target.value as InstrumentNoteIcon}))
-                    e.target.blur()
-                }}
-            >
-                {noteIcons.map(iconKind =>
-                    <option key={iconKind} value={iconKind}>
-                        {t(`common:${iconKind}`)}
-                    </option>
-                )}
-            </select>
-        </div>
-
         <div className="row" style={{marginTop: '1rem', alignItems: "center"}}>
             {t('volume')}
             <span style={{

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --menu-size: 4rem;
     --panel-size: 40vw;
 }
@@ -301,9 +301,9 @@
     background-color: rgba(0, 0, 0, 0.35);
     border-radius: 0.4rem;
     padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.6rem;
 }
 .shop-sheet-row {
     display: flex;

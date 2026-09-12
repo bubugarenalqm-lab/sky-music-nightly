@@ -9,6 +9,7 @@ import type {InstrumentName, NoteStatus} from '$types/GeneralTypes'
 import type {ApproachingNote} from '$lib/Songs/SongClasses'
 import {useObservableObject} from '$lib/Hooks/useObservable'
 import {preventDefault} from "$lib/utils/Utilities";
+import layerStyles from './LayerShapes.module.css'
 
 function getTextColor() {
     const noteBg = ThemeProvider.get('note_background')
@@ -50,7 +51,10 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
     const animation = {
         transition: `background-color ${state.delay}ms  ${state.delay === (APP_NAME === 'Genshin' ? 100 : 200) ? 'ease' : 'linear'} , transform 0.15s, border-color 100ms`
     }
-    const clickColor = INSTRUMENTS_DATA[instrument]?.clickColor
+    const LAYER_COLORS = ["#6ee781", "#ffc46e", "#6ea8ff", "#ff6e9c"]
+    const LAYER_SHAPES = ["circle", "star", "square", "triangle"] as const
+    const clickColor = LAYER_COLORS[state.layer ?? -1] ?? INSTRUMENTS_DATA[instrument]?.clickColor
+    const clickShape = LAYER_SHAPES[state.layer ?? -1]
     return <button
         onPointerDown={(e) => {
             e.preventDefault()
@@ -73,6 +77,12 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
                     ? {borderColor: clickColor} : {}
                 }
                 className={NOTES_CSS_CLASSES.noteAnimation}
+            />
+        }
+        {state.status === 'clicked' && clickShape &&
+            <div
+                className={`${layerStyles.layerShape} ${layerStyles[clickShape]}`}
+                style={clickShape === 'triangle' ? ({'--tri-color': clickColor} as any) : {backgroundColor: clickColor}}
             />
         }
         <div

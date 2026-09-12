@@ -1,23 +1,22 @@
-import {SPEED_CHANGERS} from "$config"
+﻿import {SPEED_CHANGERS} from "$config"
 import {MemoizedIcon} from "$cmp/shared/Utility/Memoized";
-import {FaEye, FaEyeSlash, FaStop, FaPlay} from "react-icons/fa";
-import {ChangeEvent, memo, useCallback, useEffect, useState} from "react";
+import {FaEye, FaEyeSlash, FaStop, FaPlay, FaStepBackward, FaStepForward, FaRandom} from "react-icons/fa";
+import {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {playerStore} from "$stores/PlayerStore";
 import {playerControlsStore} from "$stores/PlayerControlsStore";
-import {hasTooltip, Tooltip} from '$cmp/shared/Utility/Tooltip'
 import {IconButton} from "$cmp/shared/Inputs/IconButton";
 import {useObservableObject} from "$lib/Hooks/useObservable";
 import {GiMetronome} from "react-icons/gi";
-import {AppButton} from "$cmp/shared/Inputs/AppButton";
-import {PlayerSlider} from "./PlayerSlider";
+import {PlayerTimeline} from "./PlayerTimeline";
 import {PlayerVisualSheetRenderer} from "./PlayerPagesRenderer";
 import s from './Slider.module.css'
 import svs from './VisualSheet.module.css'
 import {useTranslation} from "react-i18next";
 import {VscDebugRestart} from "react-icons/vsc";
+import type {ChangeEvent} from "react";
 
 interface PlayerSongControlsProps {
-    onRestart: () => void
+    onRestart: (index?: number) => void
     onRawSpeedChange: (event: ChangeEvent<HTMLSelectElement>) => void
     onToggleRecordAudio: (override: boolean) => void
     onToggleMetronome: () => void
@@ -32,23 +31,26 @@ interface PlayerSongControlsProps {
     hasSong: boolean
     isMetronomePlaying: boolean
     isRecordingAudio: boolean
+
+    onPlayNext?: () => void
+    onPlayPrev?: () => void
+    onToggleRandom?: () => void
+    isRandomMode?: boolean
 }
 
 function _PlayerSongControls({
                                  onRestart,
-                                 onRawSpeedChange,
-                                 speedChanger,
                                  hasSong,
                                  isMetronomePlaying,
                                  onToggleMetronome,
-                                 isRecordingAudio,
-                                 onToggleRecordAudio,
                                  isVisualSheetVisible,
                                  visualSheetColumns,
-                                 loopEnabled,
-                                 setLoopEnabled,
                                  hidePracticeNotes,
                                  setHidePracticeNotes,
+                                 onPlayNext,
+                                 onPlayPrev,
+                                 onToggleRandom,
+                                 isRandomMode,
                              }: PlayerSongControlsProps) {
     const [needsRefresh, setNeedsRefresh] = useState(false)
     const songData = useObservableObject(playerStore.state)
@@ -61,6 +63,16 @@ function _PlayerSongControls({
     useEffect(() => {
         setNeedsRefresh(false)
     }, [songData.key]);
+
+    const activeSong = songData.song ?? songData.pausedSong
+    const notes = useMemo(() => {
+        if (!activeSong) return []
+        // ComposedSong keeps its own `.notes` array empty; the real timed notes
+        // only exist after converting it to a RecordedSong. Without this,
+        // the timeline duration/current time always computed as 0 -> "0:00".
+        return activeSong.isComposed ? activeSong.toRecordedSong().notes : activeSong.notes
+    }, [activeSong])
+
     return <>
         {(songData.song || songData.pausedSong) &&
             <div className="song-info">
@@ -76,22 +88,13 @@ function _PlayerSongControls({
             <Score/>
         }
         <div className={`column ${svs['player-controls']}`}>
-            {/*this div is here to keep an empty element to keep the styling consistent */}
-            <div>
-                {songData.eventType !== 'approaching' &&
-                    <AppButton
-                        toggled={isRecordingAudio}
-                        onClick={() => onToggleRecordAudio(!isRecordingAudio)}
-                    >
-                        {isRecordingAudio ? t('finish_recording') : t("record_audio")}
-                    </AppButton>
-                }
-            </div>
-            <div className={`column ${s['slider-wrapper']}`} style={!hasSong ? {display: 'none'} : {}}>
-                <div className={'row'} style={{width: '100%', gap: '0.4rem'}}>
+            <div
+                className={`row ${s['timeline-row']}`}
+                style={!hasSong ? {display: 'none'} : {gap: '0.8rem', alignItems: 'stretch'}}
+            >
+                <div className={`column ${s['nav-column']}`}>
                     {hidePracticeNotes !== undefined &&
                         <IconButton
-                            style={{width: '2.4rem'}}
                             onClick={() => setHidePracticeNotes(!hidePracticeNotes)}
                             tooltip={t('hide_practice_notes')}
                             toggled={hidePracticeNotes}
@@ -103,34 +106,15 @@ function _PlayerSongControls({
                             }
                         </IconButton>
                     }
-                    <AppButton
-                        style={{flex: 1, minWidth: '4rem'}}
-                        tooltip={t('loop_tooltip')}
-                        toggled={loopEnabled}
-                        onClick={() => setLoopEnabled(!loopEnabled)}
-                    >
-                        {t('loop')}
-                    </AppButton>
-                </div>
-                <div className="row" style={{width: '100%', gap: '0.4rem'}}>
-                    <div className={`${hasTooltip(true)} row`}>
-                        <select
-                            className={s['slider-select']}
-                            onChange={onRawSpeedChange}
-                            value={speedChanger.name}
-                            style={{backgroundImage: 'none'}}
+                    {onPlayPrev &&
+                        <IconButton
+                            onClick={onPlayPrev}
+                            tooltip={t('previous_song', {defaultValue: 'Previous song'})}
+                            ariaLabel={t('previous_song', {defaultValue: 'Previous song'})}
                         >
-                            <option disabled>Speed</option>
-                            {SPEED_CHANGERS.map(e => {
-                                return <option value={e.name} key={e.name}>
-                                    {e.name}
-                                </option>
-                            })}
-                        </select>
-                        <Tooltip position="left">
-                            {t('change_speed')}
-                        </Tooltip>
-                    </div>
+                            <MemoizedIcon icon={FaStepBackward}/>
+                        </IconButton>
+                    }
                     <IconButton
                         onClick={() => {
                             if (songData.pausedSong) {
@@ -139,29 +123,48 @@ function _PlayerSongControls({
                                 playerStore.pause(playerControlsStore.current, playerControlsStore.end)
                             }
                         }}
-                        style={{flex: 1}}
                         tooltip={songData.pausedSong ? t('common:play') : t('common:stop')}
                         ariaLabel={songData.pausedSong ? t("common:play") : t("stop_song")}
                     >
                         <MemoizedIcon icon={songData.pausedSong ? FaPlay : FaStop}/>
                     </IconButton>
+                    {onPlayNext &&
+                        <IconButton
+                            onClick={onPlayNext}
+                            tooltip={t('next_song', {defaultValue: 'Next song'})}
+                            ariaLabel={t('next_song', {defaultValue: 'Next song'})}
+                        >
+                            <MemoizedIcon icon={FaStepForward}/>
+                        </IconButton>
+                    }
+                    {onToggleRandom &&
+                        <IconButton
+                            toggled={isRandomMode}
+                            onClick={onToggleRandom}
+                            tooltip={t('random_song', {defaultValue: 'Random from library'})}
+                            ariaLabel={t('random_song', {defaultValue: 'Random from library'})}
+                        >
+                            <MemoizedIcon icon={FaRandom}/>
+                        </IconButton>
+                    }
+                    <IconButton
+                        toggled={needsRefresh}
+                        onClick={() => onRestart()}
+                        tooltip={t('shortcuts:props.restart')}
+                        ariaLabel={t("shortcuts:props.restart_description")}
+                    >
+                        <MemoizedIcon icon={VscDebugRestart}/>
+                    </IconButton>
                 </div>
 
-                <PlayerSlider
+                <PlayerTimeline
+                    notes={notes}
+                    onSeek={(index) => onRestart(index)}
                     onChange={toggleNeedsRefresh}
                 />
-                <IconButton
-                    toggled={needsRefresh}
-                    onClick={onRestart}
-                    tooltip={t('shortcuts:props.restart')}
-                    ariaLabel={t("shortcuts:props.restart_description")}
-                >
-                    <MemoizedIcon icon={VscDebugRestart}/>
-                </IconButton>
             </div>
 
             <IconButton
-
                 toggled={isMetronomePlaying}
                 onClick={onToggleMetronome}
                 className={`${s['sidebar-metronome-button']} metronome-button`}
@@ -181,7 +184,7 @@ function _PlayerSongControls({
 export const PlayerSongControls = memo(_PlayerSongControls, (prev, next) => {
     return prev.speedChanger === next.speedChanger && prev.hasSong === next.hasSong && prev.isMetronomePlaying === next.isMetronomePlaying
         && prev.isRecordingAudio === next.isRecordingAudio && prev.isVisualSheetVisible === next.isVisualSheetVisible && prev.visualSheetColumns === next.visualSheetColumns
-        && prev.loopEnabled === next.loopEnabled && prev.hidePracticeNotes === next.hidePracticeNotes
+        && prev.loopEnabled === next.loopEnabled && prev.hidePracticeNotes === next.hidePracticeNotes && prev.isRandomMode === next.isRandomMode
 })
 
 

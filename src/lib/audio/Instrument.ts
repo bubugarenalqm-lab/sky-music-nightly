@@ -127,16 +127,41 @@ export class Instrument {
         if (this.volumeNode) this.volumeNode.gain.value = newVolume
     }
 
-    play = (note: number, pitch: Pitch, delay?: number) => {
+    play = (note: number, pitch: Pitch, delay?: number, sustainMs?: number) => {
         if (this.isDeleted || !this.volumeNode || !this.audioContext) return
         const pitchChanger = getPitchChanger(pitch)
         const player = this.audioContext.createBufferSource()
         player.buffer = this.buffers[note]
+        const startAt = this.audioContext.currentTime + (delay ?? 0)
+
+        if (sustainMs && sustainMs > 0 && this.name === 'Violin') {
+            const noteGain = this.audioContext.createGain()
+            noteGain.gain.setValueAtTime(1, startAt)
+            player.connect(noteGain)
+            noteGain.connect(this.volumeNode)
+            player.playbackRate.value = pitchChanger
+            player.start(startAt)
+
+            const fadeMs = Math.min(40, sustainMs)
+            const stopAt = startAt + (sustainMs / 1000)
+            noteGain.gain.setValueAtTime(1, Math.max(startAt, stopAt - fadeMs / 1000))
+            noteGain.gain.linearRampToValueAtTime(0, stopAt)
+            player.stop(stopAt + 0.02)
+
+            function handleEndSustain() {
+                player.stop()
+                player.disconnect()
+                noteGain.disconnect()
+            }
+            player.addEventListener('ended', handleEndSustain, {once: true})
+            return
+        }
+
         player.connect(this.volumeNode)
         //player.detune.value = pitch * 100, pitch should be 0 indexed from C
         player.playbackRate.value = pitchChanger
         if (delay) {
-            player.start(this.audioContext.currentTime + delay)
+            player.start(startAt)
         } else {
             player.start()
         }
@@ -210,6 +235,7 @@ export type NoteDataState = {
     status: NoteStatus,
     delay: number
     animationId: number
+    layer: number
 }
 
 export class ObservableNote {
@@ -225,7 +251,8 @@ export class ObservableNote {
     readonly data: NoteDataState = {
         status: '',
         delay: 0,
-        animationId: 0
+        animationId: 0,
+        layer: 0
     }
 
     constructor(index: number, noteNames: NoteName, url: string, baseNote: BaseNote, midiNote: number) {

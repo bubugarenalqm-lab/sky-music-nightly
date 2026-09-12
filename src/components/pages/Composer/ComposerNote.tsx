@@ -1,18 +1,19 @@
-import {memo, useEffect, useState} from 'react'
+﻿import {memo, useEffect, useState} from 'react'
 import {APP_NAME, INSTRUMENTS_DATA, NOTES_CSS_CLASSES} from "$config"
 import GenshinNoteBorder from '$cmp/shared/Miscellaneous/GenshinNoteBorder'
 import SvgNote, {NoteImage} from '$cmp/shared/SvgNotes'
 import {Theme, ThemeProvider} from '$stores/ThemeStore/ThemeProvider'
 import {ObservableNote} from '$lib/audio/Instrument'
 import {InstrumentName} from '$types/GeneralTypes'
-import {LayerStatus} from '$lib/Songs/Layer'
 import {preventDefault} from "$lib/utils/Utilities";
+import type {CSSProperties} from 'react'
 
 export type ComposedNoteStatus = 0 | 1 | 2 | 3
 
 interface ComposerNoteProps {
     data: ObservableNote
-    layer: LayerStatus
+    activeLayers: number
+    currentLayer: number
     instrument: InstrumentName
     clickAction: (data: ObservableNote) => void
     noteText: string
@@ -20,38 +21,54 @@ interface ComposerNoteProps {
     theme: Theme
 }
 
-/*
-    if ((layer & 1) !== 0) className += " layer-1"
-    if ((layer & 2) !== 0) className += " layer-2"
-    if ((layer & 4) !== 0) className += " layer-3"
-    if ((layer & 8) !== 0) className += " layer-4"
-*/
-//precomputed class names
-const classNameMap = new Map<LayerStatus, string>(
-    new Array(16)
-        .fill(0)
-        .map((_, i) => {
-            const layers = i.toString(2).split('').map(x => parseInt(x)).reverse()
-            const className = `${NOTES_CSS_CLASSES.noteComposer} ${layers.map((x, i) => x === 1 ? `layer-${i + 1}` : '').join(' ')}`
-            return [i as LayerStatus, className]
-        })
-)
-const baseTheme = {
-    note_background: ThemeProvider.get('note_background').desaturate(0.6).toString(),
-    isAccentDefault: ThemeProvider.isDefault('accent'),
-} as const
+const LAYER_SHAPE_COLORS = ["#6ee781", "#ffc46e", "#6ea8ff", "#ff6e9c"]
+// Vien sang hon, cung tong mau voi nen, giong kieu highlight trong game
+const LAYER_BORDER_HIGHLIGHT = ["#b8ffc4", "#ffe3b0", "#c0e0ff", "#ffc0d6"]
 
+// Vi tri 4 goc cua o note, theo dung thu tu I, IV, III, II
+// Margin bang nhau tren ca 2 canh -> tam icon nam dung tren duong cheo noi tam note voi goc do
+const QUADRANT_POSITIONS: CSSProperties[] = [
+    {top: '3px', right: '3px'},
+    {bottom: '3px', right: '3px'},
+    {bottom: '3px', left: '3px'},
+    {top: '3px', left: '3px'},
+]
+
+function LayerIcon({layerIndex, filled, size = 11}: {layerIndex: number, filled: boolean, size?: number}) {
+    const color = LAYER_SHAPE_COLORS[layerIndex] ?? '#fff'
+    const shapeProps = filled
+        ? {fill: color, stroke: 'rgba(0,0,0,0.35)', strokeWidth: 0.5}
+        : {fill: 'none', stroke: color, strokeWidth: 1, strokeOpacity: 0.55}
+    switch (layerIndex) {
+        case 0:
+            return <svg width={size} height={size} viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" {...shapeProps} /></svg>
+        case 1:
+            return <svg width={size} height={size} viewBox="0 0 10 10">
+                <polygon points="5,0 6.2,3.6 10,3.6 7,5.9 8,9.5 5,7.3 2,9.5 3,5.9 0,3.6 3.8,3.6" {...shapeProps} />
+            </svg>
+        case 2:
+            return <svg width={size} height={size} viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" {...shapeProps} /></svg>
+        case 3:
+            return <svg width={size} height={size} viewBox="0 0 10 10"><polygon points="5,0.5 9.5,9 0.5,9" {...shapeProps} /></svg>
+        default:
+            return null
+    }
+}
 
 export default memo(function ComposerNote({
                                               data,
-                                              layer,
+                                              activeLayers,
+                                              currentLayer,
                                               instrument,
                                               clickAction,
                                               noteText,
                                               noteImage,
                                               theme
                                           }: ComposerNoteProps) {
-    const [colors, setColors] = useState(baseTheme)
+    const [colors, setColors] = useState({
+        note_background: ThemeProvider.get('note_background').desaturate(0.6).toString(),
+        isAccentDefault: ThemeProvider.isDefault('accent'),
+    })
     useEffect(() => {
         const color = ThemeProvider.get('note_background').desaturate(0.6)
         setColors({
@@ -60,7 +77,20 @@ export default memo(function ComposerNote({
         })
     }, [theme])
 
-    let className = classNameMap.get(layer) ?? NOTES_CSS_CLASSES.noteComposer
+    const activeList = [0, 1, 2, 3].filter(i => (activeLayers & (1 << i)) !== 0)
+    const isSelectedActive = activeList.includes(currentLayer)
+    const otherLayers = activeList.filter(i => i !== currentLayer)
+
+    const className = NOTES_CSS_CLASSES.noteComposer + (isSelectedActive ? ' layer-selected' : '')
+
+    const noteStyle: CSSProperties = isSelectedActive
+        ? {
+            backgroundColor: LAYER_SHAPE_COLORS[currentLayer],
+            border: `3px solid ${LAYER_BORDER_HIGHLIGHT[currentLayer]}`,
+            boxShadow: `0 0 6px 1px ${LAYER_SHAPE_COLORS[currentLayer]}99`
+        }
+        : {}
+
     return <button
         onPointerDown={(e) => {
             preventDefault(e)
@@ -69,20 +99,26 @@ export default memo(function ComposerNote({
         className="button-hitbox"
         onContextMenu={preventDefault}
     >
-        <div className={className}>
+        <div className={className} style={noteStyle}>
             {APP_NAME === 'Genshin' && <GenshinNoteBorder
                 fill={colors.note_background}
                 className='genshin-border'
             />}
+            {isSelectedActive && otherLayers.map((layerIdx, order) => (
+                <div key={layerIdx} style={{position: 'absolute', ...QUADRANT_POSITIONS[order]}}>
+                    <LayerIcon layerIndex={layerIdx} filled size={17} />
+                </div>
+            ))}
+            {!isSelectedActive && activeList.map((layerIdx, order) => (
+                <div key={layerIdx} style={{position: 'absolute', ...QUADRANT_POSITIONS[order]}}>
+                    <LayerIcon layerIndex={layerIdx} filled size={17} />
+                </div>
+            ))}
             <SvgNote
                 name={noteImage}
                 color={colors.isAccentDefault ? INSTRUMENTS_DATA[instrument]?.fill : undefined}
                 background={'var(--note-background)'}
             />
-            <div className="layer-3-ball-bigger">
-            </div>
-            <div className='layer-4-line'>
-            </div>
             <div
                 className={APP_NAME === "Sky" ? "note-name-sky" : "note-name"}
             >
@@ -92,6 +128,5 @@ export default memo(function ComposerNote({
     </button>
 }, (p, n) => {
     return p.noteText === n.noteText && p.clickAction === n.clickAction && p.noteImage === n.noteImage
-        && p.noteText === n.noteText && p.layer === n.layer && p.instrument === n.instrument
+        && p.activeLayers === n.activeLayers && p.currentLayer === n.currentLayer && p.instrument === n.instrument
 })
-

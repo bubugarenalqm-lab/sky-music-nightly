@@ -32,7 +32,7 @@ interface KeyboardPlayerProps {
         hideNotesInPracticeMode: boolean
     }
     functions: {
-        playSound: (index: number, layer?: NoteLayer) => void
+        playSound: (index: number, layer?: NoteLayer, sustainMs?: number) => void
         setHasSong: (override: boolean) => void
         onSongFinished: () => void
     }
@@ -262,6 +262,28 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         const notes = this.applySpeedChange(song.notes).slice(start, end)
         const mergedNotes = RecordedSong.mergeNotesIntoChunks(notes.map(n => n.clone()))
         playerControlsStore.setPages(groupArrayEvery(mergedNotes, visualSheetSize))
+
+        const violinLayers = song.instruments
+            .map((ins, i) => ins.name === 'Violin' ? i : -1)
+            .filter(i => i !== -1)
+        const nextSustainMs: (number | undefined)[] = notes.map(() => undefined)
+        if (violinLayers.length > 0) {
+            const lastTimeForLayer: Record<number, number> = {}
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const layerBits = notes[i].layer
+                for (const layerIdx of violinLayers) {
+                    if (layerBits.test(layerIdx)) {
+                        const nextTime = lastTimeForLayer[layerIdx]
+                        if (nextTime !== undefined) {
+                            const gap = nextTime - notes[i].time - 35
+                            nextSustainMs[i] = Math.max(25, gap)
+                        }
+                        lastTimeForLayer[layerIdx] = notes[i].time
+                    }
+                }
+            }
+        }
+
         await delay(200) //add small start offset
         const startOffset = notes[0].time
         let previous = startOffset
@@ -273,7 +295,7 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
             previous = notes[i].time
             if (delayTime > 16) await delay(delayTime + delayOffset)
             if (!this.mounted || this.songTimestamp !== song.timestamp) return
-            this.handleClick(keyboard[notes[i].index], notes[i].layer)
+            this.handleClick(keyboard[notes[i].index], notes[i].layer, nextSustainMs[i])
             if (chunkPlayedNotes >= (playerControlsStore.currentChunk?.notes.length ?? 0)) {
                 chunkPlayedNotes = 1
                 playerControlsStore.incrementChunkPositionAndSetCurrent(start + i + 1)
@@ -395,11 +417,12 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
             }
         }
     }
-    handleClick = (note: ObservableNote, layers?: NoteLayer) => {
+    handleClick = (note: ObservableNote, layers?: NoteLayer, sustainMs?: number) => {
         const {keyboard} = this.state
         const hasAnimation = this.props.data.hasAnimation
         if (!note) return
         const prevStatus = keyboard[note.index].status
+        const primaryLayer = layers ? ([0, 1, 2, 3].find(i => layers.test(i)) ?? 0) : 0
         playerStore.setNoteState(note.index, {
             status: 'clicked',
             delay: playerStore.eventType !== 'play'
@@ -407,10 +430,11 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
                 : 0,
             animationId: (hasAnimation && playerStore.eventType !== 'approaching')
                 ? Math.floor(Math.random() * 10000) + Date.now()
-                : 0
+                : 0,
+            layer: primaryLayer
         })
         this.handlePracticeClick(note)
-        this.props.functions.playSound(note.index, layers)
+        this.props.functions.playSound(note.index, layers, sustainMs)
         const status = this.handleApproachClick(note)
         if (playerStore.eventType === 'approaching') {
             playerStore.setNoteState(note.index, {status})

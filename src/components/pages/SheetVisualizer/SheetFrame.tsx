@@ -23,9 +23,14 @@ export function _SheetFrame({chunk, rows, hasText, selected, theme, keyboardLayo
     const color = useMemo(() => {
         return theme.layer('primary', 0.2).toString()
     }, [theme])
-    const notes = new Array(columnsPerRow * rows).fill(false)
+    const LAYER_COLORS = ["#6ee781", "#ffc46e", "#6ea8ff", "#ff6e9c"]
+    const notes: (number | false)[] = new Array(columnsPerRow * rows).fill(false)
     chunk.notes.forEach(note => {
-        notes[note.index] = true
+        if (notes[note.index] === false) {
+            const layerObj = (note as any).layer
+            const layerIndex = layerObj ? ([0, 1, 2, 3].find(i => layerObj.test(i)) ?? 0) : 0
+            notes[note.index] = layerIndex
+        }
     })
     return <div
         className={cn(
@@ -42,11 +47,12 @@ export function _SheetFrame({chunk, rows, hasText, selected, theme, keyboardLayo
                     gridTemplateColumns: `repeat(${columnsPerRow},1fr)`,
                     '--selected-note-background': 'var(--accent)'
                 } as CSSProperties}>
-                {notes.map((exists, i) => {
+                {notes.map((noteLayer, i) => {
+                    const exists = noteLayer !== false
                     return <div
                         className={exists ? s['frame-note-s'] : s['frame-note-ns']}
                         key={i}
-                        style={!exists ? {backgroundColor: color} : {}}
+                        style={exists ? {backgroundColor: LAYER_COLORS[noteLayer as number]} : {backgroundColor: color}}
                     >
                         {(exists && hasText)
                             ? baseInstrument.getNoteText(i, keyboardLayout, 'C')

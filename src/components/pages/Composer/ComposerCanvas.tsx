@@ -319,6 +319,12 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
         })
     }
 
+    componentDidUpdate(prevProps: ComposerCanvasProps) {
+        if (prevProps.data.currentLayer !== this.props.data.currentLayer) {
+            this.state.cache?.setCurrentLayer(this.props.data.currentLayer)
+            this.forceUpdate()
+        }
+    }
     handleWheel = (e: WheelEvent) => {
         this.props.functions.selectColumn(this.props.data.selected + Math.sign(e.deltaY), true)
     }

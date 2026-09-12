@@ -1,4 +1,4 @@
-import {APP_NAME} from "$config";
+﻿import {APP_NAME} from "$config";
 import {NoteDataState, ObservableNote} from "$lib/audio/Instrument";
 import {ComposedSong} from "$lib/Songs/ComposedSong";
 import {RecordedSong} from "$lib/Songs/RecordedSong";
@@ -137,6 +137,7 @@ class PlayerStore {
             pausedEnd: undefined,
             pausedShopSheetMeta: shopMeta ?? null,
             song: null,
+            shopSheetMeta: null,
             eventType: 'paused',
             key: this.state.key + 1,
             playId: 0
@@ -158,11 +159,13 @@ class PlayerStore {
         })
     }
     restartSong = (start: number, end: number) => {
+        const {pausedSong} = this.state
         this.setState({
             start,
             end,
             key: this.state.key + 1,
-            playId: this.state.playId + 1
+            playId: this.state.playId + 1,
+            ...(pausedSong ? {pausedPosition: start, pausedEnd: end} : {})
         })
     }
 }

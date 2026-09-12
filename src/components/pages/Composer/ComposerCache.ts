@@ -1,4 +1,4 @@
-import {CACHE_DATA, NOTES_PER_COLUMN, TEMPO_CHANGERS} from "$config"
+﻿import {CACHE_DATA, NOTES_PER_COLUMN, TEMPO_CHANGERS} from "$config"
 import Color from "color"
 import {LINE_SCALE_MODE, settings, SmoothGraphics as Graphics} from '@pixi/graphics-smooth';
 import {Application, Rectangle, SCALE_MODES, Texture} from 'pixi.js'
@@ -20,6 +20,7 @@ interface ComposerCacheProps {
         secondLayer: Color,
         bars: typeof standards
     }
+    currentLayer?: number
 }
 
 export type ComposerCacheData = {
@@ -49,6 +50,7 @@ export class ComposerCache {
         secondLayer: Color,
         bars: { color: number }[]
     }
+    currentLayer: number
 
     constructor({
                     width,
@@ -57,7 +59,8 @@ export class ComposerCache {
                     timelineHeight = 30,
                     app,
                     breakpointsApp,
-                    colors
+                    colors,
+                    currentLayer = 0
                 }: ComposerCacheProps) {
 
         this.cache = {
@@ -75,6 +78,7 @@ export class ComposerCache {
         this.noteWidth = this.width
         this.noteHeight = this.height / NOTES_PER_COLUMN
         this.colors = colors
+        this.currentLayer = currentLayer
         this.app = app
         this.breakpointsApp = breakpointsApp
         this.generate()
@@ -89,6 +93,17 @@ export class ComposerCache {
         Object.values(this.cache.notes).forEach(e => e.destroy(true))
         this.app = null
         this.breakpointsApp = null
+    }
+    setCurrentLayer = (layer: number) => {
+        if (this.currentLayer === layer) return
+        this.currentLayer = layer
+        this.cache.columns.forEach(e => e.destroy(true)); this.cache.columns = []
+        this.cache.standard.forEach(e => e.destroy(true)); this.cache.standard = []
+        this.cache.columnsLarger.forEach(e => e.destroy(true)); this.cache.columnsLarger = []
+        this.cache.standardLarger.forEach(e => e.destroy(true)); this.cache.standardLarger = []
+        this.cache.breakpoints.forEach(e => e.destroy(true)); this.cache.breakpoints = []
+        Object.values(this.cache.notes).forEach(e => e.destroy(true)); this.cache.notes = {}
+        this.generate()
     }
     generate = () => {
         TEMPO_CHANGERS.forEach(tempoChanger => {
@@ -109,44 +124,56 @@ export class ComposerCache {
             const radius = this.noteWidth > 20 ? 3 : 2
             const layer = new NoteLayer(note)
             const g = new Graphics()
-            if (layer.test(0)) { //layer 1
-                g.beginFill(new Color(this.colors.mainLayer).rgbNumber())
-                    .lineStyle(1, new Color(this.colors.mainLayer).rgbNumber())
-                    .drawRoundedRect(
-                        this.margin / 2 - 0.25,
-                        this.margin / 2,
-                        Math.ceil(noteWidth - this.margin),
-                        Math.ceil(noteHeight - this.margin),
-                        radius
-                    ).endFill()
+            const LAYER_COLORS = [0x6ee781, 0xffc46e, 0x6ea8ff, 0xff6e9c]
+            const shapeCx = noteWidth / 2 - 0.25
+            const shapeCy = noteHeight / 2
+            const shapeSize = Math.min(noteWidth, noteHeight) / 2 - this.margin / 2
+            const drawStarShape = (color: number, filled: boolean) => {
+                const points: number[] = []
+                const spikes = 5
+                const outerR = shapeSize
+                const innerR = shapeSize * 0.45
+                let rot = Math.PI / 2 * 3
+                const step = Math.PI / spikes
+                for (let i = 0; i < spikes; i++) {
+                    points.push(shapeCx + Math.cos(rot) * outerR, shapeCy + Math.sin(rot) * outerR)
+                    rot += step
+                    points.push(shapeCx + Math.cos(rot) * innerR, shapeCy + Math.sin(rot) * innerR)
+                    rot += step
+                }
+                if (filled) g.beginFill(color).lineStyle(1, color).drawPolygon(points).endFill()
+                else g.lineStyle(2, color).drawPolygon(points)
             }
-            if (layer.test(1)) { //layer 2
-                g.lineStyle(this.margin === 4 ? 3 : 2, new Color(this.colors.secondLayer).rgbNumber())
-                    .drawRoundedRect(
-                        this.margin / 2 - 0.25,
-                        this.margin / 2,
-                        Math.ceil(noteWidth - this.margin),
-                        Math.ceil(noteHeight - this.margin),
-                        radius
-                    ).endFill()
+            const drawSquareShape = (color: number, filled: boolean) => {
+                const half = shapeSize * 0.9
+                if (filled) g.beginFill(color).lineStyle(1, color).drawRoundedRect(shapeCx - half, shapeCy - half, half * 2, half * 2, 2).endFill()
+                else g.lineStyle(2, color).drawRoundedRect(shapeCx - half, shapeCy - half, half * 2, half * 2, 2)
             }
-            if (layer.test(2)) { //layer 3
-                g.beginFill(new Color(this.colors.secondLayer).rgbNumber())
-                    .lineStyle(1, new Color(this.colors.secondLayer).rgbNumber())
-                    .drawCircle(
-                        noteWidth / 2 - 0.25,
-                        noteHeight / 2,
-                        noteHeight / 3 - 0.5
-                    ).endFill()
+            const drawTriangleShape = (color: number, filled: boolean) => {
+                const points = [
+                    shapeCx, shapeCy - shapeSize,
+                    shapeCx + shapeSize * 0.866, shapeCy + shapeSize * 0.5,
+                    shapeCx - shapeSize * 0.866, shapeCy + shapeSize * 0.5
+                ]
+                if (filled) g.beginFill(color).lineStyle(1, color).drawPolygon(points).endFill()
+                else g.lineStyle(2, color).drawPolygon(points)
             }
-
-            if (layer.test(3)) { //layer 4
-                const lineWidth = this.margin === 4 ? 3 : 2
-                g.lineStyle(lineWidth, new Color(this.colors.secondLayer).darken(0.15).rgbNumber())
-                    .moveTo(this.margin / 2 + 0.5, noteHeight / 2)
-                    .lineTo(noteWidth - this.margin + 0.5, noteHeight / 2)
-                    .endFill()
+            const drawLayerShape = (shapeIndex: number, color: number, filled: boolean) => {
+                if (shapeIndex === 0) { //layer 1: circle
+                    if (filled) g.beginFill(color).lineStyle(1, color).drawCircle(shapeCx, shapeCy, shapeSize).endFill()
+                    else g.lineStyle(2, color).drawCircle(shapeCx, shapeCy, shapeSize)
+                } else if (shapeIndex === 1) { //layer 2: star
+                    drawStarShape(color, filled)
+                } else if (shapeIndex === 2) { //layer 3: square
+                    drawSquareShape(color, filled)
+                } else { //layer 4: triangle
+                    drawTriangleShape(color, filled)
+                }
             }
+            const presentLayers = [0, 1, 2, 3].filter(i => layer.test(i))
+            presentLayers.forEach((layerIndex) => {
+                drawLayerShape(layerIndex, LAYER_COLORS[layerIndex], layerIndex === this.currentLayer)
+            })
             if (!this.app) return
             const texture = this.app.renderer.generateTexture(g, {
                 resolution: 2,

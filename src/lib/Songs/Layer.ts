@@ -1,4 +1,4 @@
-import {BASE_LAYER_LIMIT, HAS_BIGINT} from "$config"
+﻿import {BASE_LAYER_LIMIT, HAS_BIGINT} from "$config"
 import {InstrumentData} from "./SongClasses"
 
 //map of the possible combinations of instruments, in binary, 
@@ -101,6 +101,15 @@ export class NoteLayer {
             if (this.data === 1n << BigInt(position)) return 1
             return isSelected ? 3 : 2
         }
+    }
+
+    // Trả về bitmask cac layer dang active tren note nay (theo dung so layer, khong qua icon)
+    getActiveLayersMask(maxLayers: number = 4): number {
+        let mask = 0
+        for (let i = 0; i < maxLayers; i++) {
+            if (this.test(i)) mask |= (1 << i)
+        }
+        return mask
     }
 
     toArray() {

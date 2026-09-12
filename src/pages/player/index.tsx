@@ -17,9 +17,12 @@ import {AppButton} from '$cmp/shared/Inputs/AppButton';
 import {AudioProvider} from '$lib/Providers/AudioProvider';
 import {settingsService} from '$lib/Services/SettingsService';
 import {songsStore} from '$stores/SongsStore';
+import {fetchShopSheetsList, fetchShopSheetData, ShopSheetListItem} from '$lib/Services/SupabaseService';
+import {songService} from '$lib/Services/SongService';
 import {PageMetadata} from '$cmp/shared/Miscellaneous/PageMetadata';
 import {metronome} from '$lib/audio/Metronome';
 import {Lambda} from 'mobx';
+import {VsrgSong} from "$lib/Songs/VsrgSong";
 import {NoteLayer} from '$lib/Songs/Layer';
 import {subscribeObeservableObject} from '$lib/Hooks/useObservable';
 import {INSTRUMENTS, SPEED_CHANGERS} from '$config';
@@ -42,6 +45,9 @@ interface PlayerState {
     isMetronomePlaying: boolean
     hasSong: boolean
     speedChanger: typeof SPEED_CHANGERS[number]
+    shopSheets: ShopSheetListItem[]
+    currentShopSheetId: number | null
+    isRandomMode: boolean
 }
 
 type PlayerProps = {
@@ -66,7 +72,10 @@ class Player extends Component<PlayerProps, PlayerState> {
             isRecordingAudio: false,
             isMetronomePlaying: false,
             hasSong: false,
-            speedChanger: SPEED_CHANGERS.find(e => e.name === 'x1') as typeof SPEED_CHANGERS[number]
+            speedChanger: SPEED_CHANGERS.find(e => e.name === 'x1') as typeof SPEED_CHANGERS[number],
+            shopSheets: [],
+            currentShopSheetId: null,
+            isRandomMode: false
         }
         this.mounted = false
     }
@@ -85,6 +94,9 @@ class Player extends Component<PlayerProps, PlayerState> {
         })
         this.cleanup.push(shortcutDisposer)
         await this.init(settings)
+        fetchShopSheetsList().then(list => {
+            if (this.mounted) this.setState({shopSheets: list})
+        }).catch(e => console.error(e))
         const dispose = subscribeObeservableObject(playerStore.state, ({eventType, song}) => {
             const {settings} = this.state
             if (!settings.syncSongData.value || song === null) return
@@ -173,11 +185,66 @@ class Player extends Component<PlayerProps, PlayerState> {
         playerStore.restartSong((typeof override === 'number') ? override : playerControlsStore.position, playerControlsStore.end)
     }
 
+    loadShopSheetById = async (id: number, autoPlay: boolean = false) => {
+        try {
+            const row = await fetchShopSheetData(id)
+            if (!this.mounted || !row) return
+            const parsed = songService.parseSong(row.data)
+            if (parsed instanceof VsrgSong) {
+                logger.error("This sheet can't be played here")
+                return
+            }
+            const shopMeta = {
+                author: row.author,
+                transcribedBy: row.transcribed_by,
+                bpm: row.bpm
+            }
+            if (autoPlay) {
+                playerStore.play(parsed, 0, undefined, shopMeta)
+            } else {
+                playerStore.load(parsed, shopMeta)
+            }
+            this.setState({currentShopSheetId: id})
+        } catch (e) {
+            console.error(e)
+        }
+    }
+    playNextShopSheet = () => {
+        const {shopSheets, currentShopSheetId} = this.state
+        if (shopSheets.length === 0) return
+        const currentIndex = shopSheets.findIndex(s => s.id === currentShopSheetId)
+        const nextIndex = (currentIndex + 1 + shopSheets.length) % shopSheets.length
+        this.loadShopSheetById(shopSheets[nextIndex].id)
+    }
+    playPrevShopSheet = () => {
+        const {shopSheets, currentShopSheetId} = this.state
+        if (shopSheets.length === 0) return
+        const currentIndex = shopSheets.findIndex(s => s.id === currentShopSheetId)
+        const prevIndex = (currentIndex - 1 + shopSheets.length) % shopSheets.length
+        this.loadShopSheetById(shopSheets[prevIndex].id)
+    }
+    playRandomShopSheet = () => {
+        const {shopSheets, currentShopSheetId} = this.state
+        if (shopSheets.length === 0) return
+        if (shopSheets.length === 1) return this.loadShopSheetById(shopSheets[0].id, true)
+        let candidate = shopSheets[Math.floor(Math.random() * shopSheets.length)]
+        while (candidate.id === currentShopSheetId) {
+            candidate = shopSheets[Math.floor(Math.random() * shopSheets.length)]
+        }
+        this.loadShopSheetById(candidate.id, true)
+    }
+    toggleRandomMode = () => {
+        this.setState({isRandomMode: !this.state.isRandomMode})
+    }
     onSongFinished = async () => {
-        const {settings} = this.state
+        const {settings, isRandomMode} = this.state
         if (settings.loopPractice.value) {
             await delay(1000)
-            this.restartSong()
+            return this.restartSong()
+        }
+        if (isRandomMode) {
+            await delay(500)
+            this.playRandomShopSheet()
         }
     }
 
@@ -236,7 +303,7 @@ class Player extends Component<PlayerProps, PlayerState> {
             this.updateSettings()
         })
     }
-    playSound = (index: number, layers?: NoteLayer) => {
+    playSound = (index: number, layers?: NoteLayer, sustainMs?: number) => {
         const {state} = this
         const {settings, instruments, instrumentsData} = state
         if (state.isRecording) this.handleRecording(index)
@@ -248,7 +315,7 @@ class Player extends Component<PlayerProps, PlayerState> {
 
                 if (layers.test(i) && !insData?.muted) {
                     const pitch = insData?.pitch || settings.pitch.value
-                    ins.play(index, pitch)
+                    ins.play(index, pitch, undefined, sustainMs)
                 }
             })
         }
@@ -453,7 +520,10 @@ class Player extends Component<PlayerProps, PlayerState> {
                 onRestart={this.restartSong}
                 onToggleMetronome={toggleMetronome}
                 onRawSpeedChange={this.handleSpeedChanger}
-
+                onPlayNext={this.playNextShopSheet}
+                onPlayPrev={this.playPrevShopSheet}
+                onToggleRandom={this.toggleRandomMode}
+                isRandomMode={state.isRandomMode}
             />
         </>
     }

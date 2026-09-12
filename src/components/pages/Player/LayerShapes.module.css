@@ -1,0 +1,22 @@
+.layerShape {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: 3px;
+    right: 3px;
+    pointer-events: none;
+    z-index: 5;
+}
+.circle { border-radius: 50%; }
+.square { border-radius: 2px; }
+.triangle {
+    background: transparent !important;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid var(--tri-color);
+}
+.star {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}

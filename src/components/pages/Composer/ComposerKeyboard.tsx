@@ -1,4 +1,4 @@
-import ComposerNote from "$cmp/pages/Composer/ComposerNote"
+﻿import ComposerNote from "$cmp/pages/Composer/ComposerNote"
 import {InstrumentData, NoteColumn} from "$lib/Songs/SongClasses"
 import {NoteNameType, Pitch, TEMPO_CHANGERS} from "$config"
 import {Instrument, ObservableNote} from "$lib/audio/Instrument"
@@ -83,10 +83,8 @@ export default function ComposerKeyboard({data, functions}: ComposerKeyboardProp
 
                         return <ComposerNote
                             key={note.index}
-                            layer={(index >= 0
-                                    ? currentColumn.notes[index].layer.toLayerStatus(currentLayer, data.instruments)
-                                    : 0
-                            )}
+                            activeLayers={index >= 0 ? currentColumn.notes[index].layer.getActiveLayersMask() : 0}
+                            currentLayer={currentLayer}
                             data={note}
                             theme={theme}
                             noteText={keyboard.getNoteText(i, noteNameType, pitch)}

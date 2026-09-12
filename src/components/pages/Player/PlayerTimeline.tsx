@@ -1,0 +1,87 @@
+﻿import {useObservableObject} from "$lib/Hooks/useObservable"
+import {playerControlsStore} from "$stores/PlayerControlsStore"
+import {clamp} from "$lib/utils/Utilities"
+import {useCallback, useRef, useState, PointerEvent} from "react"
+import sl from "./Slider.module.css"
+
+interface NoteLike {
+    time: number
+}
+
+interface PlayerTimelineProps {
+    notes: NoteLike[]
+    onSeek: (index: number) => void
+    onChange?: () => void
+}
+
+function formatTime(ms: number) {
+    if (!isFinite(ms) || ms < 0) ms = 0
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+export function PlayerTimeline({notes, onSeek, onChange}: PlayerTimelineProps) {
+    const {current, size} = useObservableObject(playerControlsStore.state)
+    const [isDragging, setIsDragging] = useState(false)
+    const [dragValue, setDragValue] = useState(0)
+    const trackRef = useRef<HTMLDivElement>(null)
+
+    const displayedIndex = isDragging ? dragValue : current
+
+    const computeIndexFromEvent = useCallback((clientY: number) => {
+        if (!trackRef.current || size === 0) return 0
+        const rect = trackRef.current.getBoundingClientRect()
+        const fraction = clamp(1 - (clientY - rect.top) / rect.height, 0, 1)
+        return Math.round(fraction * size)
+    }, [size])
+
+    const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+        const index = computeIndexFromEvent(e.clientY)
+        setIsDragging(true)
+        setDragValue(index)
+    }
+    const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+        if (!isDragging) return
+        const index = computeIndexFromEvent(e.clientY)
+        setDragValue(index)
+    }
+    const handlePointerUp = () => {
+        if (!isDragging) return
+        setIsDragging(false)
+        // Update the store immediately so the thumb doesn't snap back to the
+        // old `current` value when the song is paused/stopped (nothing else
+        // updates `current` in that state, since the playback engine isn't
+        // running to advance it).
+        playerControlsStore.setPosition(dragValue)
+        playerControlsStore.setCurrent(dragValue)
+        onSeek(dragValue)
+        onChange?.()
+    }
+
+    const progress = size !== 0 ? displayedIndex / size * 100 : 0
+    const durationMs = notes.length ? notes[notes.length - 1].time : 0
+    const currentMs = notes.length ? (notes[clamp(displayedIndex, 0, notes.length - 1)]?.time ?? 0) : 0
+
+    return <div className={`column ${sl['timeline-wrapper']}`}>
+        <div className={sl['timeline-time']}>{formatTime(durationMs)}</div>
+        <div
+            className={sl['timeline-outer']}
+            ref={trackRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+        >
+            <div className={sl['timeline-track']}>
+                <div
+                    className={sl['timeline-fill']}
+                    style={{height: `${progress}%`}}
+                />
+            </div>
+            <div className={sl['timeline-thumb']} style={{bottom: `calc(${progress}% - 0.5rem)`}}/>
+        </div>
+        <div className={sl['timeline-time']}>{formatTime(currentMs)}</div>
+    </div>
+}

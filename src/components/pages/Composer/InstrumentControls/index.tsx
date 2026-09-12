@@ -152,30 +152,6 @@ function InstrumentButton({
             </div>
         }
 
-        {!isSelected &&
-            <div
-                style={{
-                    position: 'absolute',
-                    top: '0.4rem',
-                    right: '0.4rem',
-                    height: 'fit-content'
-                }}
-            >
-                {instrument.icon === 'circle' &&
-                    <FaCircle size={8} style={{display: 'block'}} color={passiveIcon.hex()}/>
-                }
-                {instrument.icon === 'border' &&
-                    <BiSquareRounded
-                        size={12}
-                        style={{display: 'block', marginRight: '-2px', marginTop: '-2px', strokeWidth: '2px'}}
-                        color={passiveIcon.hex()}
-                    />
-                }
-                {instrument.icon === 'line' &&
-                    <FaMinus size={8} style={{display: 'block'}} color={passiveIcon.hex()}/>
-                }
-            </div>
-        }
 
         <AppButton
             onClick={onClick}

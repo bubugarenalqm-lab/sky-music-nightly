@@ -1,0 +1,110 @@
+﻿
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:24:            setFetching(true)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:25:            let song = await 
+fetch('https://sky-music.herokuapp.com/api/songs?get=' + encodeURI(data.file)).then(res => res.json())
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:26:            setFetching(false)
+> src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:27:            song = songService.parseSong(song)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:28:            setCache(song)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:29:            importSong(song)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:30:        } catch (e) {
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:40:            setFetching(true)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:41:            let song = await 
+fetch('https://sky-music.herokuapp.com/api/songs?get=' + encodeURI(data.file)).then(data => data.json())
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:42:            setFetching(false)
+> src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:43:            song = songService.parseSong(song)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:44:            onClick(song, 0)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:45:            setCache(song)
+  src\components\shared\Miscellaneous\LibrarySearchedSong.tsx:46:        } catch (e) {
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:41:            const row = await fetchShopSheetData(data.id)
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:42:            setFetching(false)
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:43:            if (!row) return logger.error('Song not found')
+> src\components\shared\Miscellaneous\ShopSheetRow.tsx:44:            const parsed = songService.parseSong(row.data)
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:45:            onLoad(parsed, {
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:46:                author: row.author,
+  src\components\shared\Miscellaneous\ShopSheetRow.tsx:47:                transcribedBy: row.transcribed_by,
+  src\lib\Services\FileService.ts:174:                const oldId = song.id ?? null
+  src\lib\Services\FileService.ts:175:                song.id = null //remove the id so it can be generated
+  src\lib\Services\FileService.ts:176:                song.folderId = folderIds.get(song.folderId!) ?? null
+> src\lib\Services\FileService.ts:177:                const parsed = songService.parseSong(song)
+  src\lib\Services\FileService.ts:178:                const id = await songsStore.addSong(parsed)
+  src\lib\Services\FileService.ts:179:                songIds.set(oldId!, id)
+  src\lib\Services\FileService.ts:180:                result.appendSuccessful(parsed)
+  src\lib\Services\FileService.ts:188:                vsrgSong.id = null //remove the id so it can be generated
+  src\lib\Services\FileService.ts:189:                vsrgSong.audioSongId = songIds.get(vsrgSong.audioSongId!) ?? 
+null //related ID of the song
+  src\lib\Services\FileService.ts:190:                vsrgSong.folderId = folderIds.get(vsrgSong.folderId!) ?? null
+> src\lib\Services\FileService.ts:191:                const parsed = songService.parseSong(vsrgSong)
+  src\lib\Services\FileService.ts:192:                await songsStore.addSong(parsed)
+  src\lib\Services\FileService.ts:193:                result.appendSuccessful(parsed)
+  src\lib\Services\FileService.ts:194:            } catch (e) {
+  src\pages\backup\index.tsx:49:        const errors: SerializedSong[] = []
+  src\pages\backup\index.tsx:50:        for (const song of songs) {
+  src\pages\backup\index.tsx:51:            try {
+> src\pages\backup\index.tsx:52:                songService.parseSong(song)
+  src\pages\backup\index.tsx:53:            } catch (e) {
+  src\pages\backup\index.tsx:54:                console.error(e)
+  src\pages\backup\index.tsx:55:                errors.push(song)
+  src\pages\composer\index.tsx:956:            const { song } = this.state
+  src\pages\composer\index.tsx:957:            if (this.state.settings.autosave.value) await this.updateSong(song)
+  src\pages\composer\index.tsx:958:            const serialized = song.serialize()
+> src\pages\composer\index.tsx:959:            const parsed = songService.parseSong(serialized)
+  src\pages\composer\index.tsx:960:            const converted: any = (parsed instanceof ComposedSong || parsed 
+instanceof RecordedSong)
+  src\pages\composer\index.tsx:961:                ? parsed.toOldFormat()
+  src\pages\composer\index.tsx:962:                : parsed.serialize()
+  src\pages\composer\index.tsx:1001:                }
+  src\pages\composer\index.tsx:1002:            }
+  src\pages\composer\index.tsx:1003:            if (as === 'song') {
+> src\pages\composer\index.tsx:1004:                const parsed = songService.parseSong(song)
+  src\pages\composer\index.tsx:1005:                song.data.appName = APP_NAME
+  src\pages\composer\index.tsx:1006:                const songName = song.name
+  src\pages\composer\index.tsx:1007:                const converted = [(parsed instanceof ComposedSong || parsed 
+instanceof RecordedSong)
+  src\pages\composer\index.tsx:1028:                Analytics.userSongs('download', {page: 'composer'})
+  src\pages\composer\index.tsx:1029:            } else if (as === 'midi') {
+  src\pages\composer\index.tsx:1030:                const agrees = await 
+asyncConfirm(this.props.t('menu:midi_download_warning'))
+> src\pages\composer\index.tsx:1031:                const parsed = songService.parseSong(song)
+  src\pages\composer\index.tsx:1032:                if (parsed instanceof VsrgSong) throw new Error("Can't convert 
+Vsrg to MIDI")
+  src\pages\composer\index.tsx:1033:                const midi = parsed.toMidi()
+  src\pages\composer\index.tsx:1034:                if (!agrees) return
+  src\pages\error\index.tsx:42:    const downloadSong = (song: SerializedSong) => {
+  src\pages\error\index.tsx:43:        try {
+  src\pages\error\index.tsx:44:            const songName = song.name
+> src\pages\error\index.tsx:45:            const parsed = songService.parseSong(song)
+  src\pages\error\index.tsx:46:            const converted = [APP_NAME === 'Sky' && (parsed instanceof ComposedSong || 
+parsed instanceof RecordedSong)
+  src\pages\error\index.tsx:47:                ? parsed.toOldFormat()
+  src\pages\error\index.tsx:48:                : parsed.serialize()
+  src\pages\player\index.tsx:188:        try {
+  src\pages\player\index.tsx:189:            const row = await fetchShopSheetData(id)
+  src\pages\player\index.tsx:190:            if (!this.mounted || !row) return
+> src\pages\player\index.tsx:191:            const parsed = songService.parseSong(row.data)
+  src\pages\player\index.tsx:192:            playerStore.load(parsed, {
+  src\pages\player\index.tsx:193:                author: row.author,
+  src\pages\player\index.tsx:194:                transcribedBy: row.transcribed_by,
+  src\pages\sheet-visualizer\index.tsx:48:
+  src\pages\sheet-visualizer\index.tsx:49:    const loadSong = useCallback((song: SerializedSong, layout: 
+NoteNameType) => {
+  src\pages\sheet-visualizer\index.tsx:50:        try {
+> src\pages\sheet-visualizer\index.tsx:51:            const temp = songService.parseSong(song)
+  src\pages\sheet-visualizer\index.tsx:52:            const isValid = isComposedOrRecorded(temp)
+  src\pages\sheet-visualizer\index.tsx:53:            if (!isValid) return logger.error(t('invalid_song_to_visualize'))
+  src\pages\sheet-visualizer\index.tsx:54:            try {
+  src\pages\vsrg-composer\index.tsx:368:            vsrg.setAudioSong(null)
+  src\pages\vsrg-composer\index.tsx:369:            return this.setState({audioSong: null, renderableNotes: []})
+  src\pages\vsrg-composer\index.tsx:370:        }
+> src\pages\vsrg-composer\index.tsx:371:        const parsed = songService.parseSong(song)
+  src\pages\vsrg-composer\index.tsx:372:        if (parsed instanceof RecordedSong) {
+  src\pages\vsrg-composer\index.tsx:373:            vsrg.setAudioSong(parsed)
+  src\pages\vsrg-composer\index.tsx:374:            parsed.startPlayback(this.lastTimestamp)
+  src\pages\vsrg-player\index.tsx:82:        const serializedAudioSong = await songsStore.getSongById(song.audioSongId)
+  src\pages\vsrg-player\index.tsx:83:        logger.showPill(i18n.t("logs:loading_instruments"))
+  src\pages\vsrg-player\index.tsx:84:        if (serializedAudioSong) {
+> src\pages\vsrg-player\index.tsx:85:            const parsed = songService.parseSong(serializedAudioSong)
+  src\pages\vsrg-player\index.tsx:86:            songAudioPlayer.basePitch = parsed.pitch
+  src\pages\vsrg-player\index.tsx:87:            if (parsed instanceof RecordedSong) {
+  src\pages\vsrg-player\index.tsx:88:                this.setState({audioSong: parsed})
+
+

@@ -56,12 +56,12 @@ export function RenderColumn({
         </Sprite>
 
         {notes.map((note) => {
-            const layerStatus = note.layer.toLayerStatus(currentLayer, instruments)
-            if (layerStatus === 0) return null
+            if (note.layer.isEmpty()) return null
+            const key = Number(note.layer.asNumber())
             return <Sprite
                 key={note.index}
                 texture={
-                    cache.notes[layerStatus]
+                    cache.notes[key]
                 }
                 y={COMPOSER_NOTE_POSITIONS[note.index] * sizes.height / NOTES_PER_COLUMN}
             >
