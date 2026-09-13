@@ -146,9 +146,8 @@
 .timeline-outer {
     width: 0.5rem;
     position: relative;
-    flex: 1 1 auto;
     align-self: center;
-    min-height: 28rem;
+    height: 16rem;
     max-height: 100%;
     touch-action: none;
     cursor: pointer;
