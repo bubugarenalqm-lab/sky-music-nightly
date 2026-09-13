@@ -827,17 +827,17 @@ class Composer extends Component<ComposerProps, ComposerState> {
             selectedColumns: [song.selected]
         }, this.validateBreakpoints)
     }
-    // Tá»± Ä‘á»™ng Ä‘iá»u chá»‰nh layer 2,3,4... luĂ´n cĂ¡ch layer 1 (ná»‘t chĂ­nh) Ă­t nháº¥t 2 báº­c.
-    // Náº¿u note á»Ÿ layer phá»¥ cao hÆ¡n, báº±ng, hoáº·c chá»‰ tháº¥p hÆ¡n 1 báº­c so vá»›i layer 1 gáº§n nháº¥t
-    // (theo thá»i gian/vá»‹ trĂ­ cá»™t), sáº½ bá»‹ háº¡ dáº§n 7 Ä‘Æ¡n vá»‹ (1 quĂ£ng tĂ¡m Sky) cho tá»›i khi
-    // Ä‘áº¡t khoáº£ng cĂ¡ch tá»‘i thiá»ƒu lĂ  2. Náº¿u khĂ´ng thá»ƒ (index Ă¢m), ná»‘t Ä‘Ă³ á»Ÿ layer phá»¥ sáº½ bá»‹ xoĂ¡.
+    // Tự động điều chỉnh layer 2,3,4... luôn cách layer 1 (nốt chính) ít nhất 2 bậc.
+    // Nếu note ở layer phụ cao hơn, bằng, hoặc chỉ thấp hơn 1 bậc so với layer 1 gần nhất
+    // (theo thời gian/vị trí cột), sẽ bị hạ dần 7 đơn vị (1 quãng tám Sky) cho tới khi
+    // đạt khoảng cách tối thiểu là 2. Nếu không thể (index âm), nốt đó ở layer phụ sẽ bị xoá.
     autoNote = () => {
         const {song} = this.state
         const STEP = 7
         const MIN_DIFF = 2
 
-        // resolve(B, A): háº¡ dáº§n B (index ná»‘t layer phá»¥) cho tá»›i khi A - B >= 2
-        // tráº£ vá» null náº¿u khĂ´ng tĂ¬m Ä‘Æ°á»£c (B < 0)
+        // resolve(B, A): hạ dần B (index nốt layer phụ) cho tới khi A - B >= 2
+        // trả về null nếu không tìm được (B < 0)
         const resolve = (B: number, A: number): number | null => {
             while (B >= 0) {
                 if (A - B >= MIN_DIFF) return B
@@ -847,20 +847,20 @@ class Composer extends Component<ComposerProps, ComposerState> {
         }
 
         song.columns.forEach(column => {
-            // Láº¥y táº¥t cáº£ note index Ä‘ang thuá»™c layer 1 (index 0) trong column nĂ y
+            // Lấy tất cả note index đang thuộc layer 1 (index 0) trong column này
             const layer1Indexes: number[] = []
             column.notes.forEach(note => {
                 if (note.isLayerToggled(0)) layer1Indexes.push(note.index)
             })
 
-            // KhĂ´ng cĂ³ ná»‘t layer 1 tham chiáº¿u -> bá» qua column nĂ y
+            // Không có nốt layer 1 tham chiếu -> bỏ qua column này
             if (layer1Indexes.length === 0) return
 
-            // Duyá»‡t qua báº£n sao danh sĂ¡ch note hiá»‡n cĂ³ (vĂ¬ ta sáº½ chá»‰nh sá»­a column.notes bĂªn trong)
+            // Duyệt qua bản sao danh sách note hiện có (vì ta sẽ chỉnh sửa column.notes bên trong)
             const originalNotes = [...column.notes]
 
             originalNotes.forEach(note => {
-                // Duyá»‡t tá»«ng layer phá»¥ (2, 3, 4...) mĂ  note nĂ y Ä‘ang báº­t
+                // Duyệt từng layer phụ (2, 3, 4...) mà note này đang bật
                 for (let layerIndex = 1; layerIndex < 20; layerIndex++) {
                     if (!note.isLayerToggled(layerIndex)) continue
 
@@ -873,14 +873,14 @@ class Composer extends Component<ComposerProps, ComposerState> {
                     const resolved = resolve(B, A)
 
                     if (resolved === null) {
-                        // KhĂ´ng háº¡ Ä‘Æ°á»£c -> xoĂ¡ note khá»i layer phá»¥ nĂ y
+                        // Không hạ được -> xoá note khỏi layer phụ này
                         note.setLayer(layerIndex, false)
                         continue
                     }
 
-                    if (resolved === B) continue // Ä‘Ă£ Ä‘áº¡t chuáº©n, khĂ´ng cáº§n Ä‘á»•i
+                    if (resolved === B) continue // đã đạt chuẩn, không cần đổi
 
-                    // Cáº§n dá»i note sang index má»›i (resolved)
+                    // Cần dời note sang index mới (resolved)
                     note.setLayer(layerIndex, false)
                     const existingIdx = column.getNoteIndex(resolved)
                     if (existingIdx !== null) {
@@ -892,13 +892,13 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 }
             })
 
-            // XoĂ¡ cĂ¡c note Ä‘Ă£ rá»—ng hoĂ n toĂ n (khĂ´ng cĂ²n layer nĂ o báº­t)
+            // Xoá các note đã rỗng hoàn toàn (không còn layer nào bật)
             column.notes = column.notes.filter(note => !note.layer.isEmpty())
         })
 
         this.changes++
         this.setState({song})
-        logger.success('Auto Note Ä‘Ă£ hoĂ n táº¥t!')
+        logger.success('Auto Note đã hoàn tất!')
     }
     validateBreakpoints = () => {
         const {song} = this.state
@@ -916,28 +916,28 @@ class Composer extends Component<ComposerProps, ComposerState> {
     	chooseDownloadPath = async () => {
         try {
             const { dialog } = await import('@tauri-apps/api')
-            const dir = await dialog.open({ directory: true, title: 'Chá»n thÆ° má»¥c táº£i vá»' })
+            const dir = await dialog.open({ directory: true, title: 'Chọn thư mục tải về' })
             if (typeof dir === 'string') {
                 localStorage.setItem(this.DOWNLOAD_KEY, dir)
-                logger.success('ÄĂ£ Ä‘áº·t thÆ° má»¥c táº£i vá»: ' + dir)
+                logger.success('Đã đặt thư mục tải về: ' + dir)
             }
         } catch (e) {
             console.error(e)
-            logger.error('KhĂ´ng thá»ƒ chá»n thÆ° má»¥c')
+            logger.error('Không thể chọn thư mục')
         }
     }
 
         chooseSignaturePath = async () => {
         try {
             const { dialog } = await import('@tauri-apps/api')
-            const dir = await dialog.open({ directory: true, title: 'Chá»n thÆ° má»¥c kho lÆ°u trá»¯' })
+            const dir = await dialog.open({ directory: true, title: 'Chọn thư mục kho lưu trữ' })
             if (typeof dir === 'string') {
                 localStorage.setItem(this.ARCHIVE_KEY, dir)
-                logger.success('ÄĂ£ Ä‘áº·t kho lÆ°u trá»¯: ' + dir)
+                logger.success('Đã đặt kho lưu trữ: ' + dir)
             }
         } catch (e) {
             console.error(e)
-            logger.error('KhĂ´ng thá»ƒ chá»n thÆ° má»¥c')
+            logger.error('Không thể chọn thư mục')
         }
     }
 
@@ -950,7 +950,7 @@ signSong = async () => {
                 archivePath = localStorage.getItem(this.ARCHIVE_KEY)
                 if (!archivePath) return
             }
-            const authorInput = await asyncPrompt("Nháº­p tĂªn tĂ¡c giáº£")
+            const authorInput = await asyncPrompt("Nhập tên tác giả")
             if (authorInput === null) return
             const author = authorInput.trim()
             const { song } = this.state
@@ -960,7 +960,7 @@ signSong = async () => {
             const converted: any = (parsed instanceof ComposedSong || parsed instanceof RecordedSong)
                 ? parsed.toOldFormat()
                 : parsed.serialize()
-            // Láº¥y danh sĂ¡ch nháº¡c cá»¥: Æ°u tiĂªn láº¥y tá»« báº£n Ä‘Ă£ convert, náº¿u khĂ´ng cĂ³ thĂ¬ serialize trá»±c tiáº¿p tá»« song.instruments
+            // Lấy danh sách nhạc cụ: ưu tiên lấy từ bản đã convert, nếu không có thì serialize trực tiếp từ song.instruments
             const instruments = converted.instruments ?? song.instruments.map((ins: InstrumentData) => ins.serialize())
 		const output = {
                 name: converted.name,
@@ -981,10 +981,10 @@ signSong = async () => {
                 path: `${archivePath}/${fileName}`,
                 contents: JSON.stringify([output])
             })
-            logger.success('ÄĂ£ kĂ½ tĂªn vĂ  chuyá»ƒn vĂ o kho lÆ°u trá»¯')
+            logger.success('Đã ký tên và chuyển vào kho lưu trữ')
         } catch (e) {
             console.error(e)
-            logger.error('Lá»—i khi kĂ½ tĂªn bĂ i hĂ¡t')
+            logger.error('Lỗi khi ký tên bài hát')
         }
     }
     downloadSong = async (song: SerializedSong, as: 'song' | 'midi') => {

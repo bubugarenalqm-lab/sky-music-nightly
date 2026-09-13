@@ -1,4 +1,4 @@
-import {FaCompactDisc, FaDownload, FaMinus, FaPlus, FaTimes} from 'react-icons/fa'
+﻿import {FaCompactDisc, FaDownload, FaMinus, FaPlus, FaTimes} from 'react-icons/fa'
 import {BsMusicPlayerFill} from 'react-icons/bs'
 import {APP_NAME, BASE_PATH, IS_BETA} from "$config"
 import {CSSProperties, FC, ReactNode, useEffect, useState} from 'react'
@@ -110,7 +110,7 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
 
             {(breakpoint || !hasVisited) && <div className='home-top'>
                 <div className='home-title'>
-                    {APP_NAME} Music Nightly
+                    Tyn x {APP_NAME} Music Nightly
                 </div>
                 <div className='home-top-text'>
                     {t('app_description', {APP_NAME})}
@@ -141,7 +141,7 @@ export default function Home({askForStorage, hasVisited, setDontShowHome, closeW
                     {t('player_description')}
                 </MainContentElement>
             </div>
-            <div className='row space-around middle-size-pages-wrapper'>
+            <div className='row center middle-size-pages-wrapper' style={{justifyContent: 'center', gap: '1rem'}}>
                 
                 <a
                     href='https://www.facebook.com/Tynnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn'

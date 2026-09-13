@@ -302,8 +302,8 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
     editTrack = (index: number, data: Partial<CustomTrack>) => {
         let tracks = [...this.state.tracks]
         tracks[index] = {...tracks[index], ...data}
-        // Náº¿u local offset cá»§a track vá»«a Ä‘á»•i vĂ  track Ä‘ang báº­t auto-fit,
-        // tĂ­nh láº¡i maxScaling ngay theo offset má»›i (trĂ¡nh lá»‡ch nhá»‹p debounce)
+        // Nếu local offset của track vừa đổi và track đang bật auto-fit,
+        // tính lại maxScaling ngay theo offset mới (tránh lệch nhịp debounce)
         if ('localOffset' in data && tracks[index].autoFit) {
             tracks[index] = {
                 ...tracks[index],
@@ -315,14 +315,14 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         })
     }
 
-    // TĂ­nh maxScaling tá»‘i thiá»ƒu Ä‘á»ƒ Ä‘Æ°a cĂ¡c ná»‘t NGOĂ€I khoáº£ng vĂ o trong, dá»±a trĂªn
-    // offset Ä‘ang Ă¡p dá»¥ng thá»±c táº¿ cho track (local náº¿u cĂ³, khĂ´ng thĂ¬ global).
-    // ÄĂ¢y lĂ  cÆ¡ cháº¿ per-note cĂ³ sáºµn trong MidiNote.fromMidi: ná»‘t nĂ o Ä‘Ă£ náº±m
-    // trong [MIDI_BOUNDS.lower, MIDI_BOUNDS.upper] sáº½ khĂ´ng bá»‹ Ä‘á»¥ng tá»›i, chá»‰
-    // nhá»¯ng ná»‘t vÆ°á»£t khung má»›i Ä‘Æ°á»£c dá»‹ch dáº§n (má»—i vĂ²ng láº·p dá»‹ch 8 ná»­a cung,
-    // Ä‘Ăºng bÆ°á»›c mĂ  fromMidi dĂ¹ng) cho tá»›i khi vĂ o trong khung.
+    // Tính maxScaling tối thiểu để đưa các nốt NGOÀI khoảng vào trong, dựa trên
+    // offset đang áp dụng thực tế cho track (local nếu có, không thì global).
+    // Đây là cơ chế per-note có sẵn trong MidiNote.fromMidi: nốt nào đã nằm
+    // trong [MIDI_BOUNDS.lower, MIDI_BOUNDS.upper] sẽ không bị đụng tới, chỉ
+    // những nốt vượt khung mới được dịch dần (mỗi vòng lặp dịch 8 nửa cung,
+    // đúng bước mà fromMidi dùng) cho tới khi vào trong khung.
     computeAutoFitScaling = (track: CustomTrack, globalOffset: number): number => {
-        const STEP = 12 // trĂ¹ng vá»›i bÆ°á»›c dá»‹ch (1 quĂ£ng tĂ¡m tháº­t) trong MidiNote.fromMidi
+        const STEP = 12 // trùng với bước dịch (1 quãng tám thật) trong MidiNote.fromMidi
         const currentOffset = track.localOffset ?? globalOffset
         let neededScaling = 0
         track.track.notes.forEach(midiNote => {
@@ -338,7 +338,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         return neededScaling
     }
 
-    // Báº­t auto-fit cho track: Ä‘Ă¡nh dáº¥u autoFit=true vĂ  tĂ­nh maxScaling ngay láº­p tá»©c
+    // Bật auto-fit cho track: đánh dấu autoFit=true và tính maxScaling ngay lập tức
     autoFitTrack = (index: number) => {
         const tracks = [...this.state.tracks]
         const track = tracks[index]
@@ -353,7 +353,7 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         })
     }
 
-    // Táº¯t auto-fit -> tráº£ maxScaling vá» 0 (máº·c Ä‘á»‹nh, khĂ´ng dá»‹ch ná»‘t nĂ o)
+    // Tắt auto-fit -> trả maxScaling về 0 (mặc định, không dịch nốt nào)
     autoFitReset = (index: number) => {
         const tracks = [...this.state.tracks]
         const track = tracks[index]
@@ -364,9 +364,9 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
         })
     }
 
-    // Vá»›i má»i track Ä‘ang báº­t auto-fit, tĂ­nh láº¡i maxScaling theo offset má»›i nháº¥t.
-    // ÄÆ°á»£c gá»i láº¡i má»—i khi global offset hoáº·c local offset cá»§a 1 track thay Ä‘á»•i,
-    // Ä‘á»ƒ trĂ¡nh tĂ¬nh tráº¡ng maxScaling bá»‹ "lá»‡ch nhá»‹p" so vá»›i debounce cá»§a Ă´ offset.
+    // Với mọi track đang bật auto-fit, tính lại maxScaling theo offset mới nhất.
+    // Được gọi lại mỗi khi global offset hoặc local offset của 1 track thay đổi,
+    // để tránh tình trạng maxScaling bị "lệch nhịp" so với debounce của ô offset.
     resyncAutoFitTracks = (tracks: CustomTrack[], globalOffset: number): CustomTrack[] => {
         return tracks.map(track =>
             track.autoFit
@@ -378,8 +378,8 @@ class MidiImport extends Component<MidiImportProps, MidiImportState> {
     changeOffset = (value: number) => {
         if (!Number.isInteger(value)) value = 0
         if (this.state.offset === value) return
-        // Global offset Ä‘á»•i -> tĂ­nh láº¡i maxScaling cho má»i track Ä‘ang báº­t auto-fit,
-        // Ä‘á»ƒ khĂ´ng bá»‹ lá»‡ch nhá»‹p so vá»›i debounce cá»§a Ă´ nháº­p offset
+        // Global offset đổi -> tính lại maxScaling cho mọi track đang bật auto-fit,
+        // để không bị lệch nhịp so với debounce của ô nhập offset
         const tracks = this.resyncAutoFitTracks(this.state.tracks, value)
         this.setState({offset: value, tracks}, () => {
             if (this.state.tracks.length > 0) this.convertMidi()

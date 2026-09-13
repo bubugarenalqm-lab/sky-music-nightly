@@ -119,12 +119,12 @@ function PathSettingsSection({functions}: {
     return <div style={{marginTop: '0.5rem'}}>
         <Separator background={'var(--secondary)'} height={'0.1rem'} verticalMargin={'0.5rem'}/>
         <div style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>
-            ÄÆ°á»ng dáº«n lÆ°u trá»¯
+            Đường dẫn lưu trữ
         </div>
         <div style={rowStyle}>
-            <div>ThÆ° má»¥c táº£i vá» (Download)</div>
+            <div>Thư mục tải về (Download)</div>
             <div style={pathTextStyle}>
-                {downloadPath || 'ChÆ°a Ä‘áº·t (dĂ¹ng máº·c Ä‘á»‹nh cá»§a trĂ¬nh duyá»‡t)'}
+                {downloadPath || 'Chưa đặt (dùng mặc định của trình duyệt)'}
             </div>
             <AppButton
                 style={{width: 'fit-content'}}
@@ -133,13 +133,13 @@ function PathSettingsSection({functions}: {
                     setDownloadPath(localStorage.getItem(DOWNLOAD_PATH_KEY) || '')
                 }}
             >
-                Chá»n thÆ° má»¥c...
+                Chọn thư mục...
             </AppButton>
         </div>
         <div style={rowStyle}>
-            <div>Kho lÆ°u trá»¯ (KĂ½ TĂªn)</div>
+            <div>Kho lưu trữ (Ký Tên)</div>
             <div style={pathTextStyle}>
-                {archivePath || 'ChÆ°a Ä‘áº·t'}
+                {archivePath || 'Chưa đặt'}
             </div>
             <AppButton
                 style={{width: 'fit-content'}}
@@ -148,7 +148,7 @@ function PathSettingsSection({functions}: {
                     setArchivePath(localStorage.getItem(ARCHIVE_PATH_KEY) || '')
                 }}
             >
-                Chá»n thÆ° má»¥c...
+                Chọn thư mục...
             </AppButton>
         </div>
     </div>
@@ -266,7 +266,7 @@ function Menu({data, functions, inPreview}: MenuProps) {
                     setSelectedMenu('Settings')
                     toggleMenu(true)
                 }}
-                ariaLabel='CĂ i Ä‘áº·t Ä‘Æ°á»ng dáº«n'
+                ariaLabel='Cài đặt đường dẫn'
                 style={{marginTop: 'auto'}}
             >
                 <MemoizedIcon icon={FaFolderOpen} className={'icon'}/>
