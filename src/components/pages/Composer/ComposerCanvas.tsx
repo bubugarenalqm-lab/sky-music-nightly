@@ -1,4 +1,4 @@
-//TODO i hate this component with all my heart, the code needs to be improved, but this is the only way to make
+﻿//TODO i hate this component with all my heart, the code needs to be improved, but this is the only way to make
 //it half performant, maybe i should get rid of react pixi and do it manually, that might improve garbage collection
 //since sprites are always removed and added to the stage everytime it scrolls
 import {Component, createRef} from 'react'
@@ -165,7 +165,12 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
 
     componentDidMount() {
         const {numberOfColumnsPerCanvas} = this.state
-        const sizes = document.body.getBoundingClientRect()
+        const bodySizes = document.body.getBoundingClientRect()
+        // Dung window.innerWidth thay vi body.getBoundingClientRect().width:
+        // neu body dang bi tran ngang (vd do 1 hang phim rong hon man hinh),
+        // width cua body se lon hon man hinh that, gay vong lap khien canvas/
+        // thanh thoi gian ngay cang rong ra tren mobile.
+        const sizes = {width: Math.min(window.innerWidth, bodySizes.width), height: bodySizes.height}
         let width = nearestEven(sizes.width * 0.85 - 45)
         let height = nearestEven(sizes.height * 0.45)
         if (APP_NAME === "Sky") height = nearestEven(height * 0.95)
@@ -256,7 +261,8 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
         if (this.cacheRecalculateDebounce) clearTimeout(this.cacheRecalculateDebounce)
         this.cacheRecalculateDebounce = setTimeout(() => {
             if (!this.notesStageRef?.current || !this.breakpointsStageRef?.current) return
-            const sizes = document.body.getBoundingClientRect()
+            const bodySizes = document.body.getBoundingClientRect()
+            const sizes = {width: Math.min(window.innerWidth, bodySizes.width), height: bodySizes.height}
             const {numberOfColumnsPerCanvas} = this.state
             const {inPreview} = this.props.data
             let width = nearestEven(sizes.width * 0.85 - 45)
