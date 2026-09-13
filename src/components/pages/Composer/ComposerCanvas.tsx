@@ -172,6 +172,8 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
         // thanh thoi gian ngay cang rong ra tren mobile.
         const sizes = {width: Math.min(window.innerWidth, bodySizes.width), height: bodySizes.height}
         let width = nearestEven(sizes.width * 0.85 - 45)
+        // Chan cung: khong bao gio vuot qua man hinh that, du body co bi tran hay khong
+        width = Math.min(width, window.innerWidth - 16)
         let height = nearestEven(sizes.height * 0.45)
         if (APP_NAME === "Sky") height = nearestEven(height * 0.95)
         this.setState({
@@ -266,6 +268,8 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
             const {numberOfColumnsPerCanvas} = this.state
             const {inPreview} = this.props.data
             let width = nearestEven(sizes.width * 0.85 - 45)
+            // Chan cung: khong bao gio vuot qua man hinh that
+            width = Math.min(width, window.innerWidth - 16)
             let height = nearestEven(sizes.height * 0.45)
             if (APP_NAME === "Sky") height = nearestEven(height * 0.95)
             if (inPreview) {
