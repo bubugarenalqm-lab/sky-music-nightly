@@ -1,3 +1,7 @@
+import {reaction} from 'mobx'
+import {devicePermissionStore} from '$stores/DevicePermissionStore'
+import {getInversePermutation} from '$lib/Songs/NoteScramble'
+import {getSheetKey, isLibrarySheet} from '$lib/Songs/LibrarySheet'
 import {Component} from 'react'
 import {APP_NAME, NoteNameType, Pitch, SPEED_CHANGERS} from "$config"
 import Note from '$cmp/pages/Player/PlayerNote'
@@ -84,6 +88,7 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         })
         const disposeKeyboard = createKeyboardListener("player_keyboard_keys", this.handleKeyboard)
         this.cleanup.push(disposeShortcuts, disposeKeyboard)
+        this.cleanup.push(reaction(() => devicePermissionStore.state.notesVisible, () => this.forceUpdate()))
         this.cleanup.push(subscribeObeservableObject(playerStore.state, async () => {
             //this is because mobx calls for each prop changed while i want to batch it and execute all at once
             if (this.debouncedStateUpdate) clearTimeout(this.debouncedStateUpdate)
@@ -148,13 +153,29 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         clearInterval(this.tickInterval)
     }
 
+    // --- scramble (display only): slot = visual key, real = the note that really plays ---
+    getInverse = (): readonly number[] | null => {
+        const song = playerStore.state.song ?? playerStore.state.pausedSong
+        if (!song || !isLibrarySheet(song)) return null
+        if (devicePermissionStore.state.notesVisible === true) return null
+        const size = this.state.keyboard.length
+        if (size < 2) return null
+        return getInversePermutation(devicePermissionStore.state.deviceId, getSheetKey(song), size)
+    }
+    slotToReal = (note: ObservableNote): ObservableNote => {
+        const inverse = this.getInverse()
+        if (!inverse) return note
+        return this.state.keyboard[inverse[note.index]] ?? note
+    }
+    handleUserClick = (note: ObservableNote) => this.handleClick(this.slotToReal(note))
+
     handleMidi = ([eventType, note, velocity]: MIDIEvent) => {
         if (!this.mounted) return
         const instrument = this.props.data.instrument
         if (MIDIProvider.isDown(eventType) && velocity !== 0) {
             const keyboardNotes = MIDIProvider.getNotesOfMIDIevent(note)
             keyboardNotes.forEach(keyboardNote => {
-                this.handleClick(instrument.notes[keyboardNote.index])
+                this.handleUserClick(instrument.notes[keyboardNote.index])
             })
         }
     }
@@ -162,7 +183,7 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         if (event.repeat) return
         if (!event.shiftKey) {
             const note = this.props.data.instrument.getNoteFromCode(shortcut.name)
-            if (note !== null) this.handleClick(note)
+            if (note !== null) this.handleUserClick(note)
         }
     }
     approachingSong = async (song: RecordedSong, start = 0, end?: number) => {
@@ -462,6 +483,7 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         if (keyboard.length === 8) keyboardClass += " keyboard-4"
         if (keyboard.length === 6) keyboardClass += " keyboard-3"
         const hideNotes = data.hideNotesInPracticeMode && this.mode === 'practice'
+        const inverse = this.getInverse()
         const style = size !== 1 ? {transform: `scale(${size})`} : {}
         return <>
             <div
@@ -477,15 +499,16 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
 
                     : keyboard.map(note => {
                         return <Note
-                            key={note.index}
+                            key={`${note.index}-${inverse ? inverse[note.index] : -1}`}
                             note={note}
+                            stateNote={inverse ? keyboard[inverse[note.index]] : undefined}
                             data={{
                                 approachRate: this.approachRate,
                                 instrument: instrument.name,
                             }}
                             hideNote={hideNotes}
-                            approachingNotes={state.approachingNotes[note.index]}
-                            handleClick={this.handleClick}
+                            approachingNotes={state.approachingNotes[inverse ? inverse[note.index] : note.index]}
+                            handleClick={this.handleUserClick}
                             noteText={instrument.getNoteText(note.index, noteNameType, pitch)}
                         />
 

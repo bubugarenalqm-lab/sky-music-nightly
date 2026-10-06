@@ -1,4 +1,10 @@
-﻿import ComposerNote from "$cmp/pages/Composer/ComposerNote"
+import {showRealNotes, getSheetKey} from '$lib/Songs/LibrarySheet'
+import type {ScrambleSongLike} from '$lib/Songs/LibrarySheet'
+import {getInversePermutation} from '$lib/Songs/NoteScramble'
+import {useNotesVisible} from '$lib/Hooks/useNotesVisible'
+import {devicePermissionStore} from '$stores/DevicePermissionStore'
+import {COMPOSER_NOTE_POSITIONS} from '$config'
+import ComposerNote from "$cmp/pages/Composer/ComposerNote"
 import {InstrumentData, NoteColumn} from "$lib/Songs/SongClasses"
 import {NoteNameType, Pitch, TEMPO_CHANGERS} from "$config"
 import {Instrument, ObservableNote} from "$lib/audio/Instrument"
@@ -10,6 +16,7 @@ import {Header} from "$cmp/shared/header/Header";
 import {useTranslation} from "react-i18next";
 
 interface ComposerKeyboardProps {
+    scrambleSong?: ScrambleSongLike | null
     data: {
         keyboard: Instrument
         instruments: InstrumentData[]
@@ -29,7 +36,8 @@ interface ComposerKeyboardProps {
     }
 }
 
-export default function ComposerKeyboard({data, functions}: ComposerKeyboardProps) {
+export default function ComposerKeyboard({data, functions, scrambleSong}: ComposerKeyboardProps) {
+    const notesVisible = useNotesVisible()
     const {t} = useTranslation('composer')
     const {keyboard, isPlaying, noteNameType, currentColumn, pitch, currentLayer, isRecordingAudio} = data
     const {handleClick, handleTempoChanger} = functions
@@ -52,6 +60,9 @@ export default function ComposerKeyboard({data, functions}: ComposerKeyboardProp
             </AppButton>
         </div>
     }
+    const inverse = (scrambleSong && !showRealNotes(scrambleSong, notesVisible))
+        ? getInversePermutation(devicePermissionStore.state.deviceId, getSheetKey(scrambleSong), COMPOSER_NOTE_POSITIONS.length)
+        : null
     let keyboardClass = "keyboard"
     if (keyboard.notes.length === 15) keyboardClass += " keyboard-5"
     if (keyboard.notes.length === 14) keyboardClass += " keyboard-5"
@@ -79,7 +90,8 @@ export default function ComposerKeyboard({data, functions}: ComposerKeyboardProp
                 {keyboard.notes.length === 0 ? <div className="loading">Loading...</div> : null}
                 {keyboard.notes.map((note, i) => {
                     try {
-                        const index = currentColumn.notes.findIndex((e) => e.index === i)
+                        const realIndex = inverse ? inverse[i] : i
+                        const index = currentColumn.notes.findIndex((e) => e.index === realIndex)
 
                         return <ComposerNote
                             key={note.index}

@@ -284,6 +284,7 @@ export type SongData = {
     isComposed: boolean
     isComposedVersion: boolean,
     appName: string
+    isLibrarySheet?: boolean
 }
 export type ParsedMidiNote = {
     note: number

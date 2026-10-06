@@ -1,4 +1,5 @@
-﻿//TODO i hate this component with all my heart, the code needs to be improved, but this is the only way to make
+import { showRealNotes } from '$lib/Songs/LibrarySheet'
+//TODO i hate this component with all my heart, the code needs to be improved, but this is the only way to make
 //it half performant, maybe i should get rid of react pixi and do it manually, that might improve garbage collection
 //since sprites are always removed and added to the stage everytime it scrolls
 import {Component, createRef} from 'react'
@@ -28,6 +29,8 @@ import {createShortcutListener} from '$stores/KeybindsStore';
 import {FederatedPointerEvent} from 'pixi.js';
 import {ComposerBreakpointsRenderer} from "$cmp/pages/Composer/ComposerBreakpointsRenderer";
 import {WithTranslation} from "react-i18next/index";
+import {reaction} from 'mobx'
+import {devicePermissionStore} from '$stores/DevicePermissionStore'
 
 type ClickEventType = 'up' | 'down-slider' | 'down-stage'
 
@@ -209,7 +212,11 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
         })
         this.notesStageRef?.current?._canvas?.addEventListener("wheel", this.handleWheel)
         const themeDispose = subscribeTheme(this.handleThemeChange)
-        this.cleanup.push(themeDispose, shortcutDisposer)
+        const permissionDispose = reaction(
+            () => devicePermissionStore.state.notesVisible,
+            () => this.forceUpdate()
+        )
+        this.cleanup.push(themeDispose, shortcutDisposer, permissionDispose)
     }
 
     componentWillUnmount() {
@@ -498,6 +505,9 @@ export default class ComposerCanvas extends Component<ComposerCanvasProps, Compo
                                 isToolsSelected={data.selectedColumns.includes(i)}
                                 isSelected={i === data.selected}
                                 isBreakpoint={data.breakpoints.includes(i)}
+                                sheetId={data.song.id ?? data.song.name}
+                                deviceId={devicePermissionStore.state.deviceId}
+                                notesVisible={showRealNotes(data.song, devicePermissionStore.state.notesVisible)}
                             />
                         })}
                     </Container>

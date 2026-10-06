@@ -33,11 +33,14 @@ interface NoteProps {
     approachingNotes: ApproachingNote[]
     noteText: string
     hideNote: boolean
+    stateNote?: ObservableNote
     handleClick: (note: ObservableNote) => void
 }
 
 //TODO use css vars for the colors
-function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: NoteProps) {
+function Note({note, approachingNotes, handleClick, noteText, data, hideNote, stateNote}: NoteProps) {
+    const slotIndex = note.index
+    const stateSource = stateNote ?? note
     const [textColor, setTextColor] = useState(getTextColor())
     useEffect(() => {
         const dispose = observe(ThemeProvider.state.data, () => {
@@ -46,7 +49,7 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
         return dispose
     }, [])
 
-    const state = useObservableObject(note.data)
+    const state = useObservableObject(stateSource.data)
     const {approachRate, instrument} = data
     const animation = {
         transition: `background-color ${state.delay}ms  ${state.delay === (APP_NAME === 'Genshin' ? 100 : 200) ? 'ease' : 'linear'} , transform 0.15s, border-color 100ms`
@@ -66,7 +69,7 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
         {approachingNotes.map((note) =>
             <ApproachCircle
                 key={note.id}
-                index={note.index}
+                index={slotIndex}
                 approachRate={approachRate}
             />
         )}
@@ -86,7 +89,7 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
             />
         }
         <div
-            className={`${NOTES_CSS_CLASSES.note} ${parseClass(note.status, hideNote)}`}
+            className={`${NOTES_CSS_CLASSES.note} ${parseClass(stateSource.status, hideNote)}`}
             style={{
                 ...animation,
                 ...(clickColor && state.status === 'clicked' && ThemeProvider.isDefault('accent')
@@ -116,7 +119,7 @@ function Note({note, approachingNotes, handleClick, noteText, data, hideNote}: N
 export default memo(Note, (p, n) => {
     return p.note === n.note && p.data.approachRate === n.data.approachRate && p.data.instrument === n.data.instrument
         && p.handleClick === n.handleClick && p.noteText === n.noteText && p.approachingNotes === n.approachingNotes
-        && p.hideNote === n.hideNote
+        && p.hideNote === n.hideNote && p.stateNote === n.stateNote
 }) as typeof Note
 
 function getApproachCircleColor(index: number) {

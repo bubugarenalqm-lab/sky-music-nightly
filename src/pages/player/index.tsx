@@ -1,3 +1,4 @@
+import { markLibrarySheet } from '$lib/Songs/LibrarySheet'
 import {ChangeEvent, Component, ReactNode} from 'react';
 import KeyboardPlayer from "$cmp/pages/Player/PlayerKeyboard"
 import Menu from "$cmp/pages/Player/PlayerMenu"
@@ -194,6 +195,7 @@ class Player extends Component<PlayerProps, PlayerState> {
                 logger.error("This sheet can't be played here")
                 return
             }
+            markLibrarySheet(parsed)
             const shopMeta = {
                 author: row.author,
                 transcribedBy: row.transcribed_by,

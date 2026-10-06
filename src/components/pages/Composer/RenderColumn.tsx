@@ -3,6 +3,7 @@ import type {ColumnNote, InstrumentData} from '$lib/Songs/SongClasses';
 import type {Texture} from 'pixi.js';
 import {Container, Sprite} from '@pixi/react';
 import {ComposerCacheData} from "./ComposerCache";
+import {getScramblePermutation} from "$lib/Songs/NoteScramble";
 
 interface RenderColumnProps {
     notes: ColumnNote[]
@@ -18,6 +19,10 @@ interface RenderColumnProps {
     isBreakpoint: boolean
     isSelected: boolean
     isToolsSelected: boolean
+    // scramble (display only)
+    sheetId: string
+    deviceId: string
+    notesVisible: boolean
 }
 
 export function RenderColumn({
@@ -30,9 +35,15 @@ export function RenderColumn({
                                  isBreakpoint,
                                  isSelected,
                                  isToolsSelected,
-                                 currentLayer
+                                 currentLayer,
+                                 sheetId,
+                                 deviceId,
+                                 notesVisible
                              }: RenderColumnProps) {
-
+    // DISPLAY ONLY. note.index (the real pitch) is never modified or written back.
+    const permutation = notesVisible
+        ? null
+        : getScramblePermutation(deviceId, sheetId, COMPOSER_NOTE_POSITIONS.length)
 
     return <Container
         eventMode="static"
@@ -58,12 +69,15 @@ export function RenderColumn({
         {notes.map((note) => {
             if (note.layer.isEmpty()) return null
             const key = Number(note.layer.asNumber())
+            const displayIndex = permutation && note.index >= 0 && note.index < permutation.length
+                ? permutation[note.index]
+                : note.index
             return <Sprite
                 key={note.index}
                 texture={
                     cache.notes[key]
                 }
-                y={COMPOSER_NOTE_POSITIONS[note.index] * sizes.height / NOTES_PER_COLUMN}
+                y={COMPOSER_NOTE_POSITIONS[displayIndex] * sizes.height / NOTES_PER_COLUMN}
             >
             </Sprite>
         })}

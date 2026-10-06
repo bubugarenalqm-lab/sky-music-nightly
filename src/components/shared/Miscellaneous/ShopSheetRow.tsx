@@ -1,3 +1,4 @@
+import { markLibrarySheet } from '$lib/Songs/LibrarySheet'
 import { useState } from 'react'
 import { FaSpinner, FaMusic } from 'react-icons/fa'
 import { logger } from '$stores/LoggerStore'
@@ -42,6 +43,7 @@ export default function ShopSheetRow({ data, onLoad, isSelected }: ShopSheetRowP
             setFetching(false)
             if (!row) return logger.error('Song not found')
             const parsed = songService.parseSong(row.data)
+            markLibrarySheet(parsed)
             onLoad(parsed, {
                 author: row.author,
                 transcribedBy: row.transcribed_by,

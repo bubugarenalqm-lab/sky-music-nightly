@@ -27,6 +27,7 @@ import {logsStore} from "$stores/LogsStore";
 import {GoogleAnalyticsScript} from "$cmp/GoogleAnalyticsScript";
 import Head from "next/head";
 import {asyncConfirm} from "$cmp/shared/Utility/AsyncPrompts";
+import {devicePermissionStore} from "$stores/DevicePermissionStore";
 
 import {i18n} from "$i18n/i18n"
 
@@ -35,6 +36,9 @@ interface CustomPageProps {
 }
 
 export default function App({Component, pageProps}: AppProps<CustomPageProps>) {
+    useEffect(() => {
+        devicePermissionStore.init()
+    }, [])
     useEffect(() => {
         if (window.location.hostname === "localhost") return
         const originalErrorLog = console.error.bind(console)

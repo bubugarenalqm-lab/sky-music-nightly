@@ -1,4 +1,5 @@
-﻿import {Component, ReactElement} from 'react'
+import { markLibrarySheet } from '$lib/Songs/LibrarySheet'
+import {Component, ReactElement} from 'react'
 import {FaPause, FaPlay, FaPlus, FaTools} from 'react-icons/fa';
 import {APP_NAME, INSTRUMENTS, Pitch, TEMPO_CHANGERS, TempoChanger} from "$config"
 import AddColumn from '$cmp/shared/icons/AddColumn';
@@ -598,7 +599,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
             console.log("song loaded")
             this.setState({
                 layer: 0,
-                song: parsed,
+                song: (shopMeta ? markLibrarySheet(parsed) : parsed),
                 settings: {...settings},
                 selectedColumns: [],
                 isReadOnly: readOnly,
@@ -1160,7 +1161,7 @@ signSong = async () => {
                         </div>
                     </div>
                 </div>
-                <ComposerKeyboard
+                <ComposerKeyboard scrambleSong={this.state.song}
                     functions={this}
                     data={{
                         isPlaying,
