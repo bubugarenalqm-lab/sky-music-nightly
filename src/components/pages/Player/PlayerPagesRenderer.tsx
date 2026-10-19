@@ -6,7 +6,7 @@ import {playerControlsStore} from "$stores/PlayerControlsStore"
 import {APP_NAME} from "$config"
 import s from './VisualSheet.module.css'
 
-const layoutType = APP_NAME === 'Genshin' ? 'Keyboard layout' : 'ABC'
+const layoutType = APP_NAME === 'Genshin' ? 'Sky keyboard layout' : 'ABC'
 
 
 interface PlayerVisualSheetRendererProps {

@@ -86,7 +86,7 @@ export const ComposerSettings = {
             value: APP_NAME === "Genshin"
                 ? isMobile()
                     ? "Do Re Mi"
-                    : "Keyboard layout"
+                    : "Sky keyboard layout"
                 : "Note name",
             options: NOTE_NAME_TYPES
         },
@@ -251,7 +251,7 @@ export const PlayerSettings = {
             value: APP_NAME === "Genshin"
                 ? isMobile()
                     ? "Do Re Mi"
-                    : "Keyboard layout"
+                    : "Sky keyboard layout"
                 : "Note name",
 
             options: NOTE_NAME_TYPES
@@ -715,7 +715,7 @@ export const ZenKeyboardSettings = {
             value: APP_NAME === "Genshin"
                 ? isMobile()
                     ? "Do Re Mi"
-                    : "Keyboard layout"
+                    : "Sky keyboard layout"
                 : "No Text",
 
             options: NOTE_NAME_TYPES

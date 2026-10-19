@@ -103,7 +103,7 @@ export class Instrument {
                 const res = KeyboardProvider.getTextOfCode(key as KeyboardCode) ?? key.replace('Key', '')
                 return capitalize(res)
             }
-            if(type === "Keyboard layout"){
+            if(type === "Sky keyboard layout"){
                 const key = keyBinds.getKeyOfShortcut('keyboard', layout.keyboard[index]) ?? layout.keyboard[index]
                 const res = DEFAULT_ENG_KEYBOARD_MAP[key] ?? key.replace('Key', '')
                 return capitalize(res)

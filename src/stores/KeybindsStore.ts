@@ -14,6 +14,8 @@ function createShortcut<T extends string>(name: T, isHoldable: boolean, descript
     return {name, holdable: isHoldable, description} as const
 }
 
+const SPECIAL_KEY_CODES: Record<string, string> = {";": "Semicolon", ",": "Comma", ".": "Period", "/": "Slash"}
+
 const defaultShortcuts = {
     composer: {
         "Space": createShortcut("toggle_play", false, "toggle_play_description"),
@@ -60,10 +62,10 @@ const defaultShortcuts = {
             "Z X C V B N M"
         ).split(" ")
         : (
-            "Q W E R T " +
-            "A S D F G " +
-            "Z X C V B"
-        ).split(" ")).map((key, i) => [`Key${key}`, createShortcut(key, false)]))
+            "Y U I O P " +
+            "H J K L ; " +
+            "N M , . /"
+        ).split(" ")).map((key) => [SPECIAL_KEY_CODES[key] ?? `Key${key}`, createShortcut(key, false)]))
 } as const  satisfies Record<string, Record<string, Shortcut<string>>>
 
 type ValuesOf<T> = T[keyof T]
@@ -102,7 +104,7 @@ interface SerializedKeybinds {
 }
 
 class KeyBinds {
-    version: number = 13 //change only if breaking changes are made, creating or removing a key is not a breaking change
+    version: number = 14 //change only if breaking changes are made, creating or removing a key is not a breaking change
     @observable
     private vsrg = {
         k4: ['A', 'S', 'J', 'K'],

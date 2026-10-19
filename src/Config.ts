@@ -214,9 +214,9 @@ export const LAYOUT_KINDS = {
     },
     defaultSky: {
         keyboardLayout: (
-            "Q W E R T " +
-            "A S D F G " +
-            "Z X C V B").split(" "),
+            "Y U I O P " +
+            "H J K L ; " +
+            "N M , . /").split(" "),
         numberLayout: (
             "1 2 3 4 5 " +
             "6 7 1\u0307 2\u0307 3\u0307 " +
@@ -270,7 +270,7 @@ export const LAYOUT_ICONS_KINDS = {
 }
 export type NoteNameType =
     'Note name'
-    | 'Keyboard layout'
+    | 'Sky keyboard layout'
     | 'Your Keyboard layout'
     | 'Do Re Mi'
     | 'ABC'
@@ -282,7 +282,7 @@ export type NoteNameType =
 export const NOTE_NAME_TYPES: NoteNameType[] = APP_NAME === "Genshin"
     ? [
         "Note name",
-        "Keyboard layout",
+        "Sky keyboard layout",
         "Your Keyboard layout",
         "Do Re Mi",
         "ABC",
@@ -291,7 +291,7 @@ export const NOTE_NAME_TYPES: NoteNameType[] = APP_NAME === "Genshin"
     ]
     : [
         "Note name",
-        "Keyboard layout",
+        "Sky keyboard layout",
         "Your Keyboard layout",
         "Do Re Mi",
         "ABC",

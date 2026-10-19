@@ -33,7 +33,7 @@ export default function SheetVisualizer() {
     const [songAsText, setSongAstext] = useState('')
     const [flattenSpaces, setFlattenSpaces] = useState(false)
     const [multiColor, setMultiColor] = useState(false)
-    const [keyboardLayout, setKeyboardLayout] = useState<NoteNameType>(APP_NAME === 'Genshin' ? 'Keyboard layout' : 'ABC')
+    const [keyboardLayout, setKeyboardLayout] = useState<NoteNameType>(APP_NAME === 'Genshin' ? 'Sky keyboard layout' : 'ABC')
     const ref = useRef<HTMLDivElement>(null)
 
     function setFrames(amount: number) {
