@@ -85,6 +85,8 @@ export interface SerializedInstrumentData {
     alias: string
     muted: boolean
     reverbOverride: boolean | null
+    /** which recording of the instrument to play (Aurora has several), absent = the instrument's default */
+    variant?: string | null
 }
 
 export class InstrumentData {
@@ -96,6 +98,7 @@ export class InstrumentData {
     reverbOverride: boolean | null = null
     alias = ''
     muted = false
+    variant: string | null = null
 
     constructor(data: Partial<InstrumentData> = {}) {
         Object.assign(this, data)
@@ -110,7 +113,9 @@ export class InstrumentData {
             icon: this.icon,
             alias: this.alias,
             muted: this.muted,
-            reverbOverride: this.reverbOverride
+            reverbOverride: this.reverbOverride,
+            //only written when set, so songs that never picked one keep the exact format they always had
+            ...(this.variant ? {variant: this.variant} : {})
         }
     }
 
@@ -123,7 +128,8 @@ export class InstrumentData {
             icon: data.icon ?? 'circle',
             alias: data.alias ?? "",
             muted: data.muted ?? false,
-            reverbOverride: data.reverbOverride ?? null
+            reverbOverride: data.reverbOverride ?? null,
+            variant: data.variant ?? null
         })
     }
 

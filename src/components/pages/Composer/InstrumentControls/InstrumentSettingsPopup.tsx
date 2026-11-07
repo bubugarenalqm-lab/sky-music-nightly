@@ -11,6 +11,7 @@ import {InstrumentSelect} from "$cmp/shared/Inputs/InstrumentSelect"
 import s from '$cmp/shared/Settings/Settings.module.css'
 import {Select} from "$cmp/shared/Inputs/Select";
 import {useTranslation} from "react-i18next";
+import {getInstrumentVariant, resolveInstrumentVariant} from "$lib/audio/instrumentSamples";
 
 interface InstrumentSettingsPopupProps {
     currentLayer: number
@@ -48,6 +49,8 @@ export function InstrumentSettingsPopup({
     if (!instrument) return <div className="floating-instrument-settings  box-shadow">
         {t('no_instrument_selected')}
     </div>
+    //the alternative recordings of the instrument (Aurora), none for most
+    const variant = getInstrumentVariant(instrument.name)
     return <div className="floating-instrument-settings box-shadow" ref={ref}>
         <div className="row space-between">
             {t('layer_name')}
@@ -67,9 +70,21 @@ export function InstrumentSettingsPopup({
             <InstrumentSelect
                 style={{width: '8rem'}}
                 selected={instrument.name}
-                onChange={(name) => onChange(instrument.set({name}))}
+                onChange={(name) => onChange(instrument.set({name, variant: null}))}
             />
         </div>
+        {variant && <div className="row space-between" style={{marginTop: '0.4rem'}}>
+            {t('instrument_variant')}
+            <Select
+                style={{padding: '0.3rem', width: '8rem'}}
+                value={resolveInstrumentVariant(instrument.name, instrument.variant)}
+                onChange={(e) => onChange(instrument.set({variant: e.target.value}))}
+            >
+                {Object.entries(variant.options).map(([key, option]) =>
+                    <option key={key} value={key}>{option.label}</option>
+                )}
+            </Select>
+        </div>}
         <div className="row space-between" style={{marginTop: '0.4rem'}}>
             {t('common:pitch')}
             <PitchSelect

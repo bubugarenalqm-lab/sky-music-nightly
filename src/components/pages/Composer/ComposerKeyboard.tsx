@@ -65,7 +65,8 @@ export default function ComposerKeyboard({data, functions, scrambleSong}: Compos
         : null
     let keyboardClass = "keyboard"
     if (keyboard.notes.length === 15) keyboardClass += " keyboard-5"
-    if (keyboard.notes.length === 14) keyboardClass += " keyboard-5"
+    if (keyboard.notes.length === 14) keyboardClass += " keyboard-7-2"
+    if (keyboard.notes.length === 4) keyboardClass += " keyboard-2"
     if (keyboard.notes.length === 8) keyboardClass += " keyboard-4"
     if (keyboard.notes.length === 6) keyboardClass += " keyboard-3"
 

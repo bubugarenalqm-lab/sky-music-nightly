@@ -19,6 +19,13 @@ import {subscribeObeservableObject, subscribeObservableArray} from '$lib/Hooks/u
 import {createKeyboardListener, createShortcutListener, ShortcutListener} from '$stores/KeybindsStore'
 import {i18n} from "$i18n/i18n";
 import {Song} from "$lib/Songs/Song";
+import {
+    instrumentSupportsSustain,
+    SUSTAIN_LAST_NOTE_MS,
+    SUSTAIN_MIN_HOLD_MS,
+    SUSTAIN_RELEASE_TRIM_MS,
+    SustainByLayer
+} from "$lib/audio/instrumentSamples"
 
 interface KeyboardPlayerProps {
     data: {
@@ -36,7 +43,7 @@ interface KeyboardPlayerProps {
         hideNotesInPracticeMode: boolean
     }
     functions: {
-        playSound: (index: number, layer?: NoteLayer, sustainMs?: number) => void
+        playSound: (index: number, layer?: NoteLayer, sustainMs?: SustainByLayer) => void
         setHasSong: (override: boolean) => void
         onSongFinished: () => void
     }
@@ -284,23 +291,28 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         const mergedNotes = RecordedSong.mergeNotesIntoChunks(notes.map(n => n.clone()))
         playerControlsStore.setPages(groupArrayEvery(mergedNotes, visualSheetSize))
 
-        const violinLayers = song.instruments
-            .map((ins, i) => ins.name === 'Violin' ? i : -1)
+        const sustainLayers = song.instruments
+            .map((ins, i) => instrumentSupportsSustain(ins.name) ? i : -1)
             .filter(i => i !== -1)
-        const nextSustainMs: (number | undefined)[] = notes.map(() => undefined)
-        if (violinLayers.length > 0) {
-            const lastTimeForLayer: Record<number, number> = {}
+        //how long every note is held on every sustained layer (the other layers play their samples once)
+        const nextSustainMs: (SustainByLayer | undefined)[] = notes.map(() => undefined)
+        if (sustainLayers.length > 0) {
+            //the time of the group of notes being visited and the time of the closest later group, per layer. Notes
+            //of a chord share their time and must not end each other
+            const groupTime: Record<number, number | undefined> = {}
+            const laterTime: Record<number, number | undefined> = {}
             for (let i = notes.length - 1; i >= 0; i--) {
                 const layerBits = notes[i].layer
-                for (const layerIdx of violinLayers) {
-                    if (layerBits.test(layerIdx)) {
-                        const nextTime = lastTimeForLayer[layerIdx]
-                        if (nextTime !== undefined) {
-                            const gap = nextTime - notes[i].time - 35
-                            nextSustainMs[i] = Math.max(25, gap)
-                        }
-                        lastTimeForLayer[layerIdx] = notes[i].time
+                for (const layerIdx of sustainLayers) {
+                    if (!layerBits.test(layerIdx)) continue
+                    if (groupTime[layerIdx] !== notes[i].time) {
+                        laterTime[layerIdx] = groupTime[layerIdx]
+                        groupTime[layerIdx] = notes[i].time
                     }
+                    const next = laterTime[layerIdx]
+                    const gap = next !== undefined ? next - notes[i].time - SUSTAIN_RELEASE_TRIM_MS : SUSTAIN_LAST_NOTE_MS
+                    const byLayer = nextSustainMs[i] ?? (nextSustainMs[i] = {})
+                    byLayer[layerIdx] = Math.max(SUSTAIN_MIN_HOLD_MS, gap)
                 }
             }
         }
@@ -438,7 +450,7 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
             }
         }
     }
-    handleClick = (note: ObservableNote, layers?: NoteLayer, sustainMs?: number) => {
+    handleClick = (note: ObservableNote, layers?: NoteLayer, sustainMs?: SustainByLayer) => {
         const {keyboard} = this.state
         const hasAnimation = this.props.data.hasAnimation
         if (!note) return
@@ -479,7 +491,8 @@ export default class KeyboardPlayer extends Component<KeyboardPlayerProps, Keybo
         const size = clamp(data.keyboardSize / 100, 0.5, 1.5)
         let keyboardClass = "keyboard" + (playerStore.eventType === 'play' ? " keyboard-playback" : "")
         if (keyboard.length === 15) keyboardClass += " keyboard-5"
-        if (keyboard.length === 14) keyboardClass += " keyboard-5"
+        if (keyboard.length === 14) keyboardClass += " keyboard-7-2"
+        if (keyboard.length === 4) keyboardClass += " keyboard-2"
         if (keyboard.length === 8) keyboardClass += " keyboard-4"
         if (keyboard.length === 6) keyboardClass += " keyboard-3"
         const hideNotes = data.hideNotesInPracticeMode && this.mode === 'practice'

@@ -649,6 +649,7 @@ export const i18n_en = {
     },
     instrument_settings: {
         no_instrument_selected: "No instrument selected",
+        instrument_variant: "Variant",
         layer_name: "Layer name",
         use_song_pitch: "Use song pitch",
         use_song_reverb: "Use song reverb",
@@ -795,6 +796,17 @@ export const i18n_en = {
         "LingeringEuphonia": "Lingering Euphonia",
         "LeapingSpiritPiano": "Leaping Spirit Piano",
         "HarmonicKey": "Harmonic Key",
+        "Cello": "Cello",
+        "Cymbals": "Cymbals",
+        "FortuneDrum": "Fortune Drum",
+        "Harmonica": "Harmonica",
+        "KrillHorn": "Tuned Krill Horn",
+        "Saxophone": "Saxophone",
+        "SmallBell": "Small Bell",
+        "TransverseFlute": "Transverse Flute",
+        "TriumphHandPan": "Triumph HandPan",
+        "NightwindHorn": "Nightwind Horn",
+        "Vodyanitsa": "Vodyanitsa",
     } satisfies Record<InstrumentName, string>,
     versions: {
         "3-7-0": {

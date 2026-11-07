@@ -8,6 +8,7 @@ import {ComposedSong} from '$lib/Songs/ComposedSong';
 import {InstrumentData, Recording} from '$lib/Songs/SongClasses';
 import {PlayerSettingsDataType} from "$lib/BaseSettings"
 import {Instrument} from '$lib/audio/Instrument'
+import {SustainByLayer} from '$lib/audio/instrumentSamples'
 import AudioRecorder from '$lib/audio/AudioRecorder';
 import {asyncConfirm, asyncPrompt} from "$cmp/shared/Utility/AsyncPrompts"
 import Analytics from '$lib/Analytics';
@@ -262,7 +263,7 @@ class Player extends Component<PlayerProps, PlayerState> {
         const promises = toLoad.map(async (ins, i) => {
             if (instruments[i] === undefined) {
                 //If it doesn't have a layer, create one
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 instruments[i] = instrument
                 const loaded = await instrument.load(AudioProvider.getAudioContext())
                 if (!loaded) logger.error(this.props.t('logs:error_loading_instrument'))
@@ -270,7 +271,7 @@ class Player extends Component<PlayerProps, PlayerState> {
                 AudioProvider.connect(instrument.endNode, ins.reverbOverride)
                 instrument.changeVolume(ins.volume)
                 return instrument
-            } else if (instruments[i].name === ins.name) {
+            } else if (instruments[i].isSameAs(ins.name, ins.variant)) {
                 //if it has a layer and it's the same, just set the volume and reverb
                 instruments[i].changeVolume(ins.volume)
                 AudioProvider.setReverbOfNode(instruments[i].endNode, ins.reverbOverride)
@@ -280,7 +281,7 @@ class Player extends Component<PlayerProps, PlayerState> {
                 const old = instruments[i]
                 AudioProvider.disconnect(old.endNode)
                 old.dispose()
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 instruments[i] = instrument
                 const loaded = await instrument.load(AudioProvider.getAudioContext())
                 if (!loaded) logger.error(this.props.t('logs:error_loading_instrument'))
@@ -305,7 +306,7 @@ class Player extends Component<PlayerProps, PlayerState> {
             this.updateSettings()
         })
     }
-    playSound = (index: number, layers?: NoteLayer, sustainMs?: number) => {
+    playSound = (index: number, layers?: NoteLayer, sustainMs?: SustainByLayer) => {
         const {state} = this
         const {settings, instruments, instrumentsData} = state
         if (state.isRecording) this.handleRecording(index)
@@ -317,7 +318,7 @@ class Player extends Component<PlayerProps, PlayerState> {
 
                 if (layers.test(i) && !insData?.muted) {
                     const pitch = insData?.pitch || settings.pitch.value
-                    ins.play(index, pitch, undefined, sustainMs)
+                    ins.play(index, pitch, undefined, sustainMs?.[i])
                 }
             })
         }

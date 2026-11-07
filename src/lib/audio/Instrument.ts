@@ -14,6 +14,17 @@ import {makeObservable, observable} from "mobx"
 import {InstrumentName, NoteStatus} from "$types/GeneralTypes"
 import {capitalize, getPitchChanger} from "../utils/Utilities"
 import {NoteImage} from "$cmp/shared/SvgNotes"
+import {
+    getInstrumentNoteFiles,
+    getInstrumentSampleMeta,
+    getInstrumentSustain,
+    InstrumentSustain,
+    resolveInstrumentVariant,
+    SustainLoopMode
+} from "./instrumentSamples"
+import {Voice} from "./Voice"
+import {crossfadeLoopRegion, DEFAULT_LOOP_CROSSFADE_S} from "./loopCrossfade"
+import {trimSilentTail} from "./trimSilentTail"
 import {KeyboardProvider} from "$lib/Providers/KeyboardProvider";
 import {KeyboardCode} from "$lib/Providers/KeyboardProvider/KeyboardTypes";
 import {keyBinds} from "$stores/KeybindsStore";
@@ -26,7 +37,17 @@ type Layouts = {
     playstation: string[]
     switch: string[]
 }
-const INSTRUMENT_BUFFER_POOL = new Map<InstrumentName, AudioBuffer[]>()
+//Keyed by instrument AND variant: two layers on the same instrument with different variants (Aurora) load different
+//samples, a pool keyed by name alone would hand both of them whichever one decoded first.
+const INSTRUMENT_BUFFER_POOL = new Map<string, AudioBuffer[]>()
+
+/**
+ * The gain of an instrument at 100% volume. A little under unity: chords sum, so every instrument keeps some headroom
+ * of its own and the master bus (MasterBus.ts) limits whatever still piles up past it.
+ */
+const FULL_VOLUME_GAIN = 0.9
+//a sustained instrument never has more voices sounding than this, the oldest ones are cut first
+const MAX_VOICES = 64
 
 //TODO refactor everything here
 
@@ -47,6 +68,13 @@ export class Instrument {
     isDeleted: boolean = false
     isLoaded: boolean = false
     audioContext: AudioContext | null = null
+    /** The recording of the whole instrument this layer plays (Aurora has several), undefined if it has none */
+    variant: string | undefined
+    private activeVoices: Voice[] = []
+    //the voice held down on every note, from pressNote() to releaseNote()
+    private heldVoices = new Map<number, Voice>()
+    //the last voice started right now (not scheduled ahead) on every note: a new one on the same note chokes it
+    private lastLiveVoices = new Map<number, Voice>()
 
     get endNode() {
         return this.volumeNode
@@ -56,9 +84,31 @@ export class Instrument {
         INSTRUMENT_BUFFER_POOL.clear()
     }
 
-    constructor(name: InstrumentName = INSTRUMENTS[0]) {
+    /** Whether this engine already plays what a layer asks for: the same instrument AND the same variant of it. */
+    isSameAs = (name: InstrumentName, variant?: string | null) => {
+        return this.name === name && this.variant === resolveInstrumentVariant(name, variant)
+    }
+
+    /** What makes two engines interchangeable: the name plus the variant. */
+    get identityKey() {
+        return `${this.name}:${this.variant ?? ''}`
+    }
+
+    /** The sustain config of this instrument, null when its notes are plain one-shots. */
+    get sustainConfig() {
+        return getInstrumentSustain(this.name)
+    }
+
+    /** Whether the notes of this instrument respond to how long they are held. */
+    get supportsSustain() {
+        return this.sustainConfig !== null
+    }
+
+    constructor(name: InstrumentName = INSTRUMENTS[0], variant?: string | null) {
         this.name = name
         if (!INSTRUMENTS.includes(this.name as any)) this.name = INSTRUMENTS[0]
+        this.variant = resolveInstrumentVariant(this.name, variant)
+        const noteFiles = getInstrumentNoteFiles(this.name, this.variant)
         this.instrumentData = {...INSTRUMENTS_DATA[this.name as keyof typeof INSTRUMENTS_DATA]}
         const layouts = this.instrumentData.layout
         this.layouts = {
@@ -73,7 +123,8 @@ export class Instrument {
             const noteNames = {
                 keyboard: noteName,
             }
-            const url = `${BASE_PATH}/assets/audio/${APP_NAME.toLowerCase()}/${this.name}/${i}.mp3`
+            const file = noteFiles?.[i] ?? `${i}.mp3`
+            const url = `${BASE_PATH}/assets/audio/${APP_NAME.toLowerCase()}/${this.name}/${file}`
             const note = new ObservableNote(i, noteNames, url, this.instrumentData.baseNotes[i], this.instrumentData.midiNotes[i] ?? 0)
             note.instrument = this.name
             note.noteImage = this.instrumentData.icons[i]
@@ -122,46 +173,40 @@ export class Instrument {
         return ''
     }
     changeVolume = (amount: number) => {
-        let newVolume = Number((amount / 135).toFixed(2))
+        let newVolume = Number(((amount / 100) * FULL_VOLUME_GAIN).toFixed(3))
         if (amount < 5) newVolume = 0
         if (this.volumeNode) this.volumeNode.gain.value = newVolume
     }
 
+    /** The minimum time (ms) a triggered note sounds before its release starts: a very fast tap still plays this much. */
+    private minNoteMs = (note: number): number => {
+        const sustain = this.sustainConfig
+        if (!sustain) return 0
+        const min = getInstrumentSampleMeta(this.name)?.noteMinLengths?.[note] ?? sustain.minLength
+        return typeof min === 'number' && Number.isFinite(min) && min > 0 ? min * 1000 : 0
+    }
+
+    /**
+     * Plays a note.
+     * - A plain instrument plays the sample once.
+     * - A sustained instrument plays it for `sustainMs` (until the next note of the song, for example) and then fades
+     *   out over its release. Without `sustainMs` the note is a tap: it sounds for the instrument's minimum length.
+     * `delay` is in seconds from now.
+     */
     play = (note: number, pitch: Pitch, delay?: number, sustainMs?: number) => {
         if (this.isDeleted || !this.volumeNode || !this.audioContext) return
+        if (this.supportsSustain) {
+            this.startVoice(note, pitch, delay, sustainMs && sustainMs > 0 ? sustainMs : 0)
+            return
+        }
         const pitchChanger = getPitchChanger(pitch)
         const player = this.audioContext.createBufferSource()
         player.buffer = this.buffers[note]
-        const startAt = this.audioContext.currentTime + (delay ?? 0)
-
-        if (sustainMs && sustainMs > 0 && this.name === 'Violin') {
-            const noteGain = this.audioContext.createGain()
-            noteGain.gain.setValueAtTime(1, startAt)
-            player.connect(noteGain)
-            noteGain.connect(this.volumeNode)
-            player.playbackRate.value = pitchChanger
-            player.start(startAt)
-
-            const fadeMs = Math.min(40, sustainMs)
-            const stopAt = startAt + (sustainMs / 1000)
-            noteGain.gain.setValueAtTime(1, Math.max(startAt, stopAt - fadeMs / 1000))
-            noteGain.gain.linearRampToValueAtTime(0, stopAt)
-            player.stop(stopAt + 0.02)
-
-            function handleEndSustain() {
-                player.stop()
-                player.disconnect()
-                noteGain.disconnect()
-            }
-            player.addEventListener('ended', handleEndSustain, {once: true})
-            return
-        }
-
         player.connect(this.volumeNode)
         //player.detune.value = pitch * 100, pitch should be 0 indexed from C
         player.playbackRate.value = pitchChanger
         if (delay) {
-            player.start(startAt)
+            player.start(this.audioContext.currentTime + delay)
         } else {
             player.start()
         }
@@ -173,12 +218,139 @@ export class Instrument {
 
         player.addEventListener('ended', handleEnd, {once: true})
     }
+
+    /**
+     * Presses a note of a sustained instrument and holds it until releaseNote(). For a plain instrument this is
+     * just play(). Meant for a key or a finger that stays down.
+     */
+    pressNote = (note: number, pitch: Pitch) => {
+        if (!this.supportsSustain) return this.play(note, pitch)
+        if (this.isDeleted || !this.volumeNode || !this.audioContext) return
+        this.startVoice(note, pitch, undefined, undefined)
+    }
+
+    /** Lets go of a note held with pressNote(): it still sounds for its minimum length, then fades out. */
+    releaseNote = (note: number) => {
+        const voice = this.heldVoices.get(note)
+        if (!voice) return
+        this.heldVoices.delete(note)
+        voice.releaseAt(voice.startedAt + this.minNoteMs(note) / 1000)
+    }
+
+    /** Releases every note held with pressNote(), the guard against a key-up the page never got (blur). */
+    releaseHeldNotes = () => {
+        this.heldVoices.forEach((voice, note) => voice.releaseAt(voice.startedAt + this.minNoteMs(note) / 1000))
+        this.heldVoices.clear()
+    }
+
+    /** Fades out (or, with `hard`, cuts) everything sounding: the end of a song, or a disposed instrument. */
+    releaseAllNotes = (hard = false) => {
+        this.heldVoices.clear()
+        this.lastLiveVoices.clear()
+        const voices = this.activeVoices
+        this.activeVoices = []
+        voices.forEach(voice => hard ? voice.stop() : voice.fadeOut())
+    }
+
+    /**
+     * Starts a voice of a sustained instrument. `durationMs`: how long it is held, 0 for a tap, undefined to hold it
+     * until releaseNote().
+     */
+    private startVoice = (note: number, pitch: Pitch, delay: number | undefined, durationMs: number | undefined) => {
+        const sustain = this.sustainConfig
+        const buffer = this.buffers[note]
+        if (!sustain || !buffer || !this.audioContext || !this.volumeNode) return
+        const context = this.audioContext
+        const now = context.currentTime
+        const at = delay ? now + delay : undefined
+        const scheduledAhead = at !== undefined && at > now
+        //same note again right now: choke the previous one quickly instead of layering its release under the new attack.
+        //A note scheduled ahead (song playback) must not choke what is being heard now merely because it was scheduled early
+        if (!scheduledAhead) {
+            const previous = this.lastLiveVoices.get(note)
+            if (previous && !previous.isDisposed) previous.choke()
+        }
+        this.activeVoices = this.activeVoices.filter(voice => !voice.isDisposed)
+        if (!scheduledAhead) {
+            let sounding = this.activeVoices.reduce((count, voice) => count + (voice.startedAt <= now ? 1 : 0), 0)
+            while (sounding >= MAX_VOICES) {
+                //oldest first keeps the newest notes audible
+                const oldest = this.activeVoices.findIndex(voice => voice.startedAt <= now)
+                if (oldest === -1) break
+                this.activeVoices[oldest].stop()
+                sounding--
+            }
+        }
+        const meta = getInstrumentSampleMeta(this.name)
+        const voice = new Voice({
+            context,
+            buffer,
+            destination: this.volumeNode,
+            playbackRate: getPitchChanger(pitch),
+            loop: meta?.noteLoops?.[note] ?? sustain.loop,
+            loopMode: sustain.loopMode as Exclude<SustainLoopMode, 'one-shot'>,
+            release: sustain.release,
+            crossfade: sustain.crossfade,
+            at,
+            onDispose: this.forgetVoice
+        })
+        this.activeVoices.push(voice)
+        if (!scheduledAhead) this.lastLiveVoices.set(note, voice)
+        if (durationMs === undefined) {
+            const previousHeld = this.heldVoices.get(note)
+            if (previousHeld && previousHeld !== voice) previousHeld.releaseAt(previousHeld.startedAt)
+            this.heldVoices.set(note, voice)
+            return
+        }
+        //a note always sounds at least its minimum length from its own start
+        voice.releaseAt(voice.startedAt + Math.max(durationMs, this.minNoteMs(note)) / 1000)
+    }
+
+    private forgetVoice = (voice: Voice) => {
+        const index = this.activeVoices.indexOf(voice)
+        if (index !== -1) this.activeVoices.splice(index, 1)
+        for (const [note, held] of this.heldVoices) if (held === voice) this.heldVoices.delete(note)
+        for (const [note, last] of this.lastLiveVoices) if (last === voice) this.lastLiveVoices.delete(note)
+    }
+
+    /** Bakes the loop-boundary crossfade of every looped note into its decoded buffer (see loopCrossfade.ts). */
+    private renderLoopCrossfades = () => {
+        const sustain: InstrumentSustain | null = this.sustainConfig
+        if (!sustain) return
+        const meta = getInstrumentSampleMeta(this.name)
+        const seconds = sustain.loopCrossfade ?? DEFAULT_LOOP_CROSSFADE_S
+        this.buffers.forEach((buffer, index) => {
+            const loop = meta?.noteLoops?.[index] ?? sustain.loop
+            if (!loop || !buffer) return
+            for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                crossfadeLoopRegion(buffer.getChannelData(channel), buffer.sampleRate, loop, seconds)
+            }
+        })
+    }
+
+    /**
+     * Cuts the inaudible tail off every one-shot sample (see trimSilentTail.ts), which a sounding source otherwise keeps
+     * paying CPU for. A sustained instrument is left whole: its tail is the release a Voice plays out.
+     */
+    private trimSilentTails = (audioContext: AudioContext) => {
+        if (this.sustainConfig) return
+        this.buffers = this.buffers.map(buffer => {
+            const channels = Array.from({length: buffer.numberOfChannels}, (_, channel) => buffer.getChannelData(channel))
+            const length = trimSilentTail(channels, buffer.sampleRate)
+            if (length === null) return buffer
+            const trimmed = audioContext.createBuffer(buffer.numberOfChannels, length, buffer.sampleRate)
+            channels.forEach((data, channel) => trimmed.getChannelData(channel).set(data.subarray(0, length)))
+            return trimmed
+        })
+    }
+
     load = async (audioContext: AudioContext) => {
         this.audioContext = audioContext
         this.volumeNode = audioContext.createGain()
-        this.volumeNode.gain.value = 0.8
+        this.volumeNode.gain.value = FULL_VOLUME_GAIN
         let loadedCorrectly = true
-        if (!INSTRUMENT_BUFFER_POOL.has(this.name)) {
+        const key = this.identityKey
+        if (!INSTRUMENT_BUFFER_POOL.has(key)) {
             const emptyBuffer = this.audioContext.createBuffer(2, this.audioContext.sampleRate, this.audioContext.sampleRate)
             const requests: Promise<AudioBuffer>[] = this.notes.map(note =>
                 fetchAudioBuffer(note.url, audioContext)
@@ -188,9 +360,12 @@ export class Instrument {
                     })
             )
             this.buffers = await Promise.all(requests)
-            if (loadedCorrectly) INSTRUMENT_BUFFER_POOL.set(this.name, this.buffers)
+            //once per decode and BEFORE pooling: a pool hit must reuse the processed buffers, never blend them again
+            this.renderLoopCrossfades()
+            this.trimSilentTails(audioContext)
+            if (loadedCorrectly) INSTRUMENT_BUFFER_POOL.set(key, this.buffers)
         } else {
-            this.buffers = INSTRUMENT_BUFFER_POOL.get(this.name)!
+            this.buffers = INSTRUMENT_BUFFER_POOL.get(key)!
         }
         this.isLoaded = true
         return loadedCorrectly
@@ -203,6 +378,7 @@ export class Instrument {
         this.volumeNode?.connect(node)
     }
     dispose = () => {
+        this.releaseAllNotes(true)
         this.disconnect()
         this.isDeleted = true
         this.buffers = []

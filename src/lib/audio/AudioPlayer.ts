@@ -41,14 +41,14 @@ export class AudioPlayer {
         const promises = instruments.map(async (ins, i) => {
             if (audioInstruments[i] === undefined) {
                 //If it doesn't have the instrument, create it
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 audioInstruments[i] = instrument
                 await instrument.load(AudioProvider.getAudioContext())
                 AudioProvider.connect(instrument.endNode, ins.reverbOverride)
                 instrument.changeVolume(ins.volume)
                 return instrument
             }
-            if (audioInstruments[i].name === ins.name) {
+            if (audioInstruments[i].isSameAs(ins.name, ins.variant)) {
                 //if it has the instrument and it's the same, just set the volume and reverb
                 audioInstruments[i].changeVolume(ins.volume)
                 AudioProvider.setReverbOfNode(audioInstruments[i].endNode, ins.reverbOverride)
@@ -58,7 +58,7 @@ export class AudioPlayer {
                 const old = audioInstruments[i]
                 AudioProvider.disconnect(old.endNode)
                 old.dispose()
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 audioInstruments[i] = instrument
                 await instrument.load(AudioProvider.getAudioContext())
                 AudioProvider.connect(instrument.endNode, ins.reverbOverride)

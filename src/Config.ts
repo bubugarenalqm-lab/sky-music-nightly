@@ -48,6 +48,8 @@ export const INSTRUMENTS = APP_NAME === "Genshin"
         "LingeringEuphonia",
         "LeapingSpiritPiano",
         "HarmonicKey",
+        "NightwindHorn",
+        "Vodyanitsa",
         "DunDun",
         "DjemDjemDrum"
     ] as const
@@ -56,15 +58,20 @@ export const INSTRUMENTS = APP_NAME === "Genshin"
         "GrandPiano",
         "Contrabass",
         "Guitar",
-	"Violin",
+        "Violin",
+        "Cello",
         "LightGuitar",
         "Harp",
         "Horn",
+        "KrillHorn",
         "Trumpet",
+        "Saxophone",
+        "Harmonica",
         "Pipa",
         "WinterPiano",
         "Xylophone",
         "Flute",
+        "TransverseFlute",
         "Panflute",
         "Ocarina",
         "MantaOcarina",
@@ -72,9 +79,13 @@ export const INSTRUMENTS = APP_NAME === "Genshin"
         "Kalimba",
         "ToyUkulele",
         "Drum",
+        "Cymbals",
+        "FortuneDrum",
         "Bells",
+        "SmallBell",
         "DunDun",
         "HandPan",
+        "TriumphHandPan",
         "SFX_SineSynth",
         "SFX_BassSynth",
         "SFX_ChimeSynth",
@@ -236,6 +247,26 @@ export const LAYOUT_KINDS = {
             "L R ❰L ❰R L❱"
         ).split(" ")
     },
+    //Sky's Fortune Drum and Cymbals: the left two columns of the 2x4 drums
+    drums4: {
+        keyboardLayout: (
+            "Q W " +
+            "A S").split(" "),
+        numberLayout: (
+            "1 2 " +
+            "1̣ 2̣").split(" "),
+        abcLayout: (
+            "A1 A2 " +
+            "B1 B2").split(" "),
+        playstationLayout: (
+            "⟰ ▲ " +
+            "⟱ X"
+        ).split(" "),
+        switchLayout: (
+            "⟰ X " +
+            "⟱ B"
+        ).split(" "),
+    },
     skySFX6: {
         keyboardLayout: (
             "Q W E " +
@@ -258,6 +289,16 @@ export const LAYOUT_KINDS = {
     },
 
 }
+//Genshin's two-octave instruments are two rows of the 3x7: the lower two (Nightwind Horn) or the upper two (Vodyanitsa)
+const sliceGenshinLayout = (from: number, to: number) => ({
+    keyboardLayout: LAYOUT_KINDS.defaultGenshin.keyboardLayout.slice(from, to),
+    numberLayout: LAYOUT_KINDS.defaultGenshin.numberLayout.slice(from, to),
+    abcLayout: LAYOUT_KINDS.defaultGenshin.abcLayout.slice(from, to),
+    playstationLayout: LAYOUT_KINDS.defaultGenshin.playstationLayout.slice(from, to),
+    switchLayout: LAYOUT_KINDS.defaultGenshin.switchLayout.slice(from, to),
+})
+const genshin14Low = sliceGenshinLayout(7, 21)
+const genshin14High = sliceGenshinLayout(0, 14)
 //TODO add the instrument data like layout kinds here instead of LAYOUT_KINDS
 export const LAYOUT_ICONS_KINDS = {
     defaultSky: "dmcr dm cr dm cr cr dm dmcr dm cr cr dm cr dm dmcr".split(" ") as NoteImage[],
@@ -411,6 +452,28 @@ export const BaseinstrumentsData: { [key in string]: InstrumentDataType } = APP_
         layout: LAYOUT_KINDS.defaultGenshin,
         icons: LAYOUT_ICONS_KINDS.defaultGenshin,
         midiNotes: INSTRUMENT_MIDI_LAYOUT_KINDS.defaultGenshin
+    },
+    NightwindHorn: {
+        notes: 14,
+        family: "brass",
+        midiName: "french horn",
+        fill: "#dbb361",
+        clickColor: "#dbb361",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B"] as BaseNote[],
+        layout: genshin14Low,
+        icons: ["do", "re", "mi", "fa", "so", "la", "ti", "do", "re", "mi", "fa", "so", "la", "ti"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65, 67, 69, 71, 48, 50, 52, 53, 55, 57, 59],
+    },
+    Vodyanitsa: {
+        notes: 14,
+        family: "ensemble",
+        midiName: "voice oohs",
+        fill: "#4a9ede",
+        clickColor: "#7ab8e8",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B"] as BaseNote[],
+        layout: genshin14High,
+        icons: ["do", "re", "mi", "fa", "so", "la", "ti", "do", "re", "mi", "fa", "so", "la", "ti"] as NoteImage[],
+        midiNotes: [72, 74, 76, 77, 79, 81, 83, 60, 62, 64, 65, 67, 69, 71],
     },
     DunDun: {
         notes: 8,
@@ -702,6 +765,87 @@ export const BaseinstrumentsData: { [key in string]: InstrumentDataType } = APP_
         layout: LAYOUT_KINDS.defaultDrums,
         icons: LAYOUT_ICONS_KINDS.defaultSkyDrums,
         midiNotes: INSTRUMENT_MIDI_LAYOUT_KINDS.defaultDrums,
+    },
+    Cello: {
+        notes: 15,
+        family: "strings",
+        midiName: "cello",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B", "C"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultSky,
+        icons: ["dmcr", "dm", "cr", "dm", "cr", "cr", "dm", "dmcr", "dm", "cr", "cr", "dm", "cr", "dm", "dmcr"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84],
+    },
+    Cymbals: {
+        notes: 4,
+        family: "percussive",
+        midiName: "reverse cymbal",
+        baseNotes: ["C", "D", "E", "F"] as BaseNote[],
+        layout: LAYOUT_KINDS.drums4,
+        icons: ["cr", "dm", "cr", "dm"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65],
+    },
+    FortuneDrum: {
+        notes: 4,
+        family: "percussive",
+        midiName: "taiko drum",
+        baseNotes: ["C", "D", "E", "F"] as BaseNote[],
+        layout: LAYOUT_KINDS.drums4,
+        icons: ["cr", "dm", "cr", "dm"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65],
+    },
+    Harmonica: {
+        notes: 15,
+        family: "reed",
+        midiName: "harmonica",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B", "C"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultSky,
+        icons: ["dmcr", "dm", "cr", "dm", "cr", "cr", "dm", "dmcr", "dm", "cr", "cr", "dm", "cr", "dm", "dmcr"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84],
+    },
+    KrillHorn: {
+        notes: 8,
+        family: "brass",
+        midiName: "french horn",
+        baseNotes: ["F", "G", "A", "B", "C", "D", "E", "F"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultDrums,
+        icons: ["dm", "cr", "cr", "dm", "dmcr", "dm", "cr", "cr"] as NoteImage[],
+        midiNotes: [65, 67, 69, 71, 72, 74, 76, 77],
+    },
+    Saxophone: {
+        notes: 15,
+        family: "reed",
+        midiName: "alto sax",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B", "C"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultSky,
+        icons: ["dmcr", "dm", "cr", "dm", "cr", "cr", "dm", "dmcr", "dm", "cr", "cr", "dm", "cr", "dm", "dmcr"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84],
+    },
+    SmallBell: {
+        notes: 8,
+        family: "chromatic percussion",
+        midiName: "tinkle bell",
+        baseNotes: ["C", "D", "G", "A", "C", "D", "G", "A"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultDrums,
+        icons: ["cr", "dm", "cr", "dm", "cr", "dm", "cr", "dm"] as NoteImage[],
+        midiNotes: [60, 62, 67, 69, 72, 74, 79, 81],
+    },
+    TransverseFlute: {
+        notes: 15,
+        family: "pipe",
+        midiName: "flute",
+        baseNotes: ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E", "F", "G", "A", "B", "C"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultSky,
+        icons: ["dmcr", "dm", "cr", "dm", "cr", "cr", "dm", "dmcr", "dm", "cr", "cr", "dm", "cr", "dm", "dmcr"] as NoteImage[],
+        midiNotes: [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84],
+    },
+    TriumphHandPan: {
+        notes: 8,
+        family: "percussive",
+        midiName: "steel drums",
+        baseNotes: ["D", "A", "C", "D", "F", "G", "A", "C"] as BaseNote[],
+        layout: LAYOUT_KINDS.defaultDrums,
+        icons: ["cr", "dm", "cr", "dm", "cr", "dm", "cr", "dm"] as NoteImage[],
+        midiNotes: [62, 69, 72, 74, 77, 79, 81, 84],
     },
 }
 type InstrumentsDataKeys = keyof typeof BaseinstrumentsData

@@ -13,6 +13,12 @@ import Memoized, {MemoizedIcon} from '$cmp/shared/Utility/Memoized';
 import {asyncConfirm, asyncPrompt} from "$cmp/shared/Utility/AsyncPrompts"
 import {ComposerSettingsDataType} from "$lib/BaseSettings"
 import {Instrument, ObservableNote} from "$lib/audio/Instrument"
+import {
+    instrumentSupportsSustain,
+    SUSTAIN_LAST_NOTE_MS,
+    SUSTAIN_MIN_HOLD_MS,
+    SUSTAIN_RELEASE_TRIM_MS
+} from "$lib/audio/instrumentSamples"
 import {calculateSongLength, delay, formatMs, routeChangeBugFix} from "$lib/utils/Utilities"
 import {ComposedSong, UnknownSerializedComposedSong} from '$lib/Songs/ComposedSong';
 import {InstrumentData, NoteColumn} from '$lib/Songs/SongClasses';
@@ -338,7 +344,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         const promises = song.instruments.map(async (ins, i) => {
             if (layers[i] === undefined) {
                 //If it doesn't have a layer, create one
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 layers[i] = instrument
                 const loaded = await instrument.load(AudioProvider.getAudioContext())
                 if (!loaded) logger.error(this.props.t('logs:error_loading_instrument'))
@@ -347,7 +353,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 instrument.changeVolume(ins.volume)
                 return instrument
             }
-            if (layers[i].name === ins.name) {
+            if (layers[i].isSameAs(ins.name, ins.variant)) {
                 //if it has a layer and it's the same, just set the volume and reverb
                 layers[i].changeVolume(ins.volume)
                 AudioProvider.setReverbOfNode(layers[i].endNode, ins.reverbOverride)
@@ -357,7 +363,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
                 const old = layers[i]
                 AudioProvider.disconnect(old.endNode)
                 old.dispose()
-                const instrument = new Instrument(ins.name)
+                const instrument = new Instrument(ins.name, ins.variant)
                 layers[i] = instrument
                 const loaded = await instrument.load(AudioProvider.getAudioContext())
                 if (!loaded) logger.error(this.props.t('logs:error_loading_instrument'))
@@ -403,9 +409,10 @@ class Composer extends Component<ComposerProps, ComposerState> {
             logger.error(this.props.t('logs:error_downloading_audio'))
         }
     }
-    violinSustainMap: Record<number, Map<number, number>> = {}
+    //how long (ms) the note of every column is held on every sustained layer, by layer index, then column index
+    sustainMap: Record<number, Map<number, number>> = {}
 
-    computeViolinSustain = () => {
+    computeSustain = () => {
         const { song, settings } = this.state
         const msPerBeatBase = 60000 / settings.bpm.value
         const times: number[] = []
@@ -414,36 +421,21 @@ class Composer extends Component<ComposerProps, ComposerState> {
             times[i] = t
             t += Song.roundTime(msPerBeatBase * TEMPO_CHANGERS[column.tempoChanger].changer)
         })
-        const stepHasActiveNote = (colIndex: number) => song.columns[colIndex].notes.some(n => {
-            for (let li = 0; li < song.instruments.length; li++) {
-                if (n.isLayerToggled(li) && !song.instruments[li].muted) return true
-            }
-            return false
-        })
-        const nextActiveStepIndex: number[] = new Array(song.columns.length).fill(-1)
-        let nextActive = -1
-        for (let k = song.columns.length - 1; k >= 0; k--) {
-            nextActiveStepIndex[k] = nextActive
-            if (stepHasActiveNote(k)) nextActive = k
-        }
-        const violinLayers = song.instruments
-            .map((ins, idx) => ins.name === 'Violin' ? idx : -1)
-            .filter(idx => idx !== -1)
-        const minPressTimeMs = 25
-        const releaseTrimMs = 35
         const sustainMap: Record<number, Map<number, number>> = {}
-        violinLayers.forEach(layerIdx => {
+        song.instruments.forEach((instrument, layerIdx) => {
+            if (!instrumentSupportsSustain(instrument.name)) return
             const map = new Map<number, number>()
-            song.columns.forEach((col, i) => {
-                if (!col.notes.some(n => n.isLayerToggled(layerIdx))) return
-                const nextIdx = nextActiveStepIndex[i]
-                if (nextIdx === -1) return
-                const gap = times[nextIdx] - times[i]
-                map.set(i, Math.max(minPressTimeMs, gap - releaseTrimMs))
-            })
+            //a note is held until the next note of its own layer
+            let nextIdx = -1
+            for (let i = song.columns.length - 1; i >= 0; i--) {
+                if (!song.columns[i].notes.some(n => n.isLayerToggled(layerIdx))) continue
+                const gap = nextIdx === -1 ? SUSTAIN_LAST_NOTE_MS : times[nextIdx] - times[i] - SUSTAIN_RELEASE_TRIM_MS
+                map.set(i, Math.max(SUSTAIN_MIN_HOLD_MS, gap))
+                nextIdx = i
+            }
             sustainMap[layerIdx] = map
         })
-        this.violinSustainMap = sustainMap
+        this.sustainMap = sustainMap
     }
 
     playSound = (layer: number, index: number, delay?: number) => {
@@ -452,7 +444,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
         if (note === undefined) return
         if (this.state.song.instruments[layer].muted) return
         const pitch = this.state.song.instruments[layer].pitch || this.state.settings.pitch.value
-        const sustainMs = this.violinSustainMap?.[layer]?.get(this.state.song.selected)
+        const sustainMs = this.sustainMap?.[layer]?.get(this.state.song.selected)
         instrument.play(note.index, pitch, delay, sustainMs)
     }
     changePitch = (value: Pitch) => {
@@ -637,7 +629,7 @@ class Composer extends Component<ComposerProps, ComposerState> {
     togglePlay = async (override?: boolean): Promise<void> => {
         return new Promise(resolve => {
             const newState = typeof override === "boolean" ? override : !this.state.isPlaying
-            if (newState) this.computeViolinSustain()
+            if (newState) this.computeSustain()
             this.setState({
                 isPlaying: newState
             }, async () => {

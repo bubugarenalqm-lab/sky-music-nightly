@@ -20,7 +20,8 @@ interface ZenKeyboardProps {
 let cssBase = `keyboard ${s['zen-keyboard']}}`
 const keyboardClasses = new Map<number, string>([
     [15, `${cssBase} keyboard-5`],
-    [14, `${cssBase} keyboard-5`],
+    [14, `${cssBase} keyboard-7-2`],
+    [4, `${cssBase} keyboard-2`],
     [8, `${cssBase} keyboard-4`],
     [6, `${cssBase} keyboard-3`],
 ])

@@ -1,5 +1,6 @@
 import {BASE_PATH} from "$config"
 import AudioRecorder from "$lib/audio/AudioRecorder"
+import {masterBusOf} from "$lib/audio/MasterBus"
 
 
 export type AppAudioNode = {
@@ -18,6 +19,9 @@ export class AudioProviderClass {
     isRecording: boolean = false
     reverbLoading: Promise<void> | null = null
 
+    // Everything audible goes through the master limiter (compressor + soft clip) before the speakers
+    private masterInput = (): AudioNode => masterBusOf(this.audioContext!).input
+
     private loadReverb = (): Promise<void> => {
         this.reverbLoading = new Promise(resolve => {
             fetch(`${BASE_PATH}/assets/audio/reverb4.wav`)
@@ -30,7 +34,7 @@ export class AudioProviderClass {
                             gainNode.gain.value = 2.5
                             convolver.buffer = impulse_response
                             convolver.connect(gainNode)
-                            gainNode.connect(this.audioContext!.destination)
+                            gainNode.connect(this.masterInput())
                             this.reverbNode = convolver
                             this.reverbVolumeNode = gainNode
                             this.reverbLoading = null
@@ -129,7 +133,7 @@ export class AudioProviderClass {
         const recording = await recorder.stop()
         if (reverbVolumeNode && audioContext) {
             reverbVolumeNode.disconnect()
-            reverbVolumeNode.connect(this.audioContext!.destination)
+            reverbVolumeNode.connect(this.masterInput())
         }
         this.isRecording = false
         this.setAudioDestinations()
@@ -154,12 +158,12 @@ export class AudioProviderClass {
         if (dest === "reverb") {
             if (!this.reverbNode) {
                 console.warn("Couldn't connect to reverb")
-                if (this.audioContext) node.node.connect(this.audioContext.destination)
+                if (this.audioContext) node.node.connect(this.masterInput())
             } else {
                 node.node.connect(this.reverbNode)
             }
         } else {
-            if (this.audioContext) node.node.connect(this.audioContext.destination)
+            if (this.audioContext) node.node.connect(this.masterInput())
         }
     }
 
